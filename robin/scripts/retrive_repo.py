@@ -97,6 +97,7 @@ def auto_load_pulls():
                                           updated_at=str(utc2local_parser(
                                               pull['updated_at']))[:-6],
                                           closed_at=pull['closed_at'],
+                                          draft_state=pull['draft'],
                                           repository=repository_db
                                           )
 

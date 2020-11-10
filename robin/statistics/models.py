@@ -72,9 +72,11 @@ class Pull(Timestampable, models.Model):
     created_at = models.DateTimeField(verbose_name='pull request created date')
     updated_at = models.DateTimeField(verbose_name='pull request uodated date')
     closed_at = models.DateTimeField(null=True, verbose_name='pull request closed date')
-
+    draft_state = models.BooleanField(default=False,
+                                      verbose_name='is drafted status')
     merged_by = models.CharField(
         max_length=32, default="null", verbose_name='merged by')
+
 
     # comments = jsonfield.JSONField(verbose_name=u'issue comments')
     # ForeignKeys:

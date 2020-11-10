@@ -124,6 +124,7 @@ def auto_load_pulls():
                                               updated_at=str(utc2local_parser(
                                                   pull['updated_at']))[:-6],
                                               closed_at=pull['closed_at'],
+                                              draft_state=pull['draft'],
                                               repository=repository_db
                                               )
 
@@ -234,6 +235,7 @@ def auto_change_pull_state():
             pull_db.deletions = pull['deletions']
             pull_db.changed_files = pull['changed_files']
             pull_db.updated_at = str(utc2local_parser(pull['updated_at']))[:-6]
+            pull_db.draft_state = pull['draft']
             pull_db.save()
 
             _create_newly_added_comments(pull_db, members)
