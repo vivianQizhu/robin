@@ -161,7 +161,9 @@ def auto_retrieve_bug_id():
         text = pull_db.body.encode("utf-8")
         match = regex.search(text)
         if match:
-            bug_id = re.findall(r"\d+", match.groups()[0])[0]
+            res = re.findall(r"\d+", match.groups()[0])
+            if res:
+                bug_id = res[0]
 
         # if not in pull body serach from comments.
         if bug_id is None:
@@ -171,7 +173,9 @@ def auto_retrieve_bug_id():
                 text = comment_db.body.encode("utf-8")
                 match = regex.search(text)
                 if match:
-                    bug_id = re.findall(r"\d+", match.groups()[0])[0]
+                    res = re.findall(r"\d+", match.groups()[0])
+                    if res:
+                        bug_id = res[0]
 
         pull_db.bug_id = bug_id
         pull_db.save()
