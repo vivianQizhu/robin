@@ -327,7 +327,8 @@ def pending_patchs(request):
                     total_pending = today - pull.created_at
                     last_updated = today - pull.updated_at
                     review_comments = Comment.objects.filter(comment_type=1, pull_id=pull.id)
-                    draft = 'Yes' if pull.draft_state else 'No'
+                    if pull.draft_state:
+                        continue
                     details.append({'patch_number': pull.pull_number,
                                     'repo': repo.repo,
                                     'patch_title': pull.title,
@@ -339,7 +340,6 @@ def pending_patchs(request):
                                     'last_updated': last_updated.days,
                                     'create_at': pull.created_at,
                                     'updated_at': pull.updated_at,
-                                    'draft_state': draft,
                                     'patch_url': _build_github_pull_url(repo.owner, repo.repo, pull.pull_number),
                                     })
 
