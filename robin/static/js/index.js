@@ -60,6 +60,7 @@ var reopData = new Vue({
         msg: '',
         alertType: 'success',
         category: '',
+        isProduct: false,
         hasRes: false,
         repoData: {
             count: 0,
@@ -89,6 +90,7 @@ var reopData = new Vue({
             prevUrl: null,
             pendingPatchs: [],
         },
+        productAll: [],
         resData: {},
         repoTmp: [],
         teamTmp: [],
@@ -347,9 +349,68 @@ var reopData = new Vue({
             }
 
         },
+        submitProductTeam: function() {
+            var self = this;
+            if (self.beginTime.length == 0 || self.endTime.length == 0) {
+                tips.call(self, 'Start and End dates are required.', 'danger')
+                return;
+            }
+            if (+new Date(self.beginTime) > +new Date(self.endTime)) {
+                tips.call(self, 'Start date can not be later than the End date.', 'danger')
+                return;
+            }
+            var kerbroes_ids = [];
+                self.teamTmp.forEach(function(el) {
+                    kerbroes_ids.push(el.members)
+                });
+            get('/api/stats/bugs/', {
+                stats_type: self.type,
+                team_code: self.selectedTeam,
+                kerbroes_id: kerbroes_ids.join(','),
+                start_date: self.beginTime,
+                end_date: self.endTime
+            }).then(function(res) {
+                console.log(res)
+                console.log(self.category)
+                self.resData = res,
+                self.hasRes = true,
+                $('#productTeamModal').modal('hide');
+                tips.call(self, 'Query Success', 'success');
+            });
+        },
+        submitProductMember: function() {
+            var self = this;
+            if (self.beginTime.length == 0 || self.endTime.length == 0) {
+                tips.call(self, 'Start and End dates are required.', 'danger')
+                return;
+            }
+            if (+new Date(self.beginTime) > +new Date(self.endTime)) {
+                tips.call(self, 'Start date can not be later than the End date.', 'danger')
+                return;
+            }
+            var kerbroes_ids = [];
+                self.memberTmp.forEach(function(el) {
+                    kerbroes_ids.push(el.kerbroes_id)
+                });
+            get('/api/stats/bugs/', {
+                stats_type: self.type,
+                team_code: self.selectedTeam,
+                kerbroes_id: kerbroes_ids.join(','),
+                start_date: self.beginTime,
+                end_date: self.endTime
+            }).then(function(res) {
+                console.log(res)
+                console.log(self.category)
+                self.resData = res,
+                self.hasRes = true,
+                $('#productMemberModal').modal('hide');
+                tips.call(self, 'Query Success', 'success');
+            });
+        },
         returnBack: function() {
             this.resData = {};
             this.hasRes = false;
+            this.isProduct = false;
         },
         chooseRepo: function(repo) {
             if (!repo.checked) {
@@ -388,22 +449,37 @@ var reopData = new Vue({
             // console.log(self.repoTmp[0].repo);
             // console.log(self.teamTmp);
             self.type = 1;
-            if (self.repoTmp.length == 0 || self.teamTmp.length == 0){
-                tips.call(self, 'Please choose a repository and a team or member.', 'danger')
-                return;
+            if (self.isProduct == true)
+            {
+                $('#productTeamModal').modal('show')
             }
-            $('#teamModal').modal('show')
+            else
+            {
+                if (self.repoTmp.length == 0 || self.teamTmp.length == 0) {
+                    tips.call(self, 'Please choose a repository and a team or member.', 'danger')
+                    return;
+                }
+                $('#teamModal').modal('show')
+            }
         },
         memberStats: function() {
             var self = this;
             // console.log(self.repoTmp[0].repo);
             // console.log(self.memberTmp[0].name);
             self.type = 1;
-            if (self.repoTmp.length == 0 || self.memberTmp.length == 0){
-                tips.call(self, 'Please choose a repository and a team or member.', 'danger')
-                return;
+            if (self.isProduct == true)
+            {
+                $('#productMemberModal').modal('show')
             }
-            $('#memberModal').modal('show')
+            else
+            {
+                if (self.repoTmp.length == 0 || self.memberTmp.length == 0)
+                {
+                    tips.call(self, 'Please choose a repository and a team or member.', 'danger')
+                    return;
+                }
+                $('#memberModal').modal('show')
+            }
         },
         showPending: function(repo){
             var self = this;
@@ -437,6 +513,29 @@ var reopData = new Vue({
             self.memberData.nextUrl = res.next;
             self.memberData.prevUrl = res.previous;
             });
+        },
+        setAllProduct: function(){
+            var self = this;
+            self.isProduct = true;
+            get('/api/bugsall/').then(function(res) {
+            console.log(res)
+            self.productAll = res;
+            self.hasRes = false;
+            var time = formatTime(+new Date(), 'Y-M-D');
+            $('#p_t_start_date').datepicker({
+                defaultViewDate: time
+            });
+            $('#p_t_end_date').datepicker();
+            $('#p_m_start_date').datepicker({
+                defaultViewDate: time
+            });
+            $('#p_m_end_date').datepicker();
+            self.beginTime = time;
+            self.endTime = time;
+            });
+        },
+        setProduct: function(){
+            this.isProduct = false;
         }
     },
     created: function() {

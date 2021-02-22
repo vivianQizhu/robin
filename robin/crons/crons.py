@@ -2,13 +2,14 @@ import re
 import logging
 import iso8601
 import pytz
+import urllib
 
 
 from datetime import timedelta, date, datetime
 from django.db import transaction as dbtransaction
 from commons import common_helpers
 from members.models import Member
-from statistics.models import Repository, Pull, Comment
+from statistics.models import Repository, Pull, Comment, ProductBug
 from scripts.githublight import Repository as Repo
 
 
@@ -150,7 +151,7 @@ def auto_retrieve_bug_id():
     load bug id into pull if pull.bug_id is null
     """
     logger.info('[CRON] auto_retrieve_bug_id on date %s start.' % YESTERDAY)
-    # after 14 days will not try to find the bug id, beacuse it was missing
+    # after 14 days will not try to find the bug id, because it was missing
     days_ago = date.today() - timedelta(days=14)
     pulls_db = Pull.objects.filter(
         bug_id=None, created_at__gt=days_ago)
@@ -265,6 +266,86 @@ def auto_change_pull_state():
             _create_newly_added_comments(pull_db, members)
 
     logger.info('[CRON] auto_change_pull_state on date %s done' % YESTERDAY)
+
+
+def auto_update_product_bug():
+    end_date = date.today()
+    start_date = date(end_date.year-1, 1, 1)
+    members = Member.objects.filter(serving=True)
+    kerbroes_id_list = [member.kerbroes_id for member in members]
+    rest_base_url = ('https://bugzilla.redhat.com/rest/bug?include_fields=id%2Cproduct'
+                    '%2Ccomponent%2Cqa_contact%2Ccreator%2Cpriority%2Ccreation_time')
+    robin_list_id = 'ROBIN_LIST_ID'
+    robin_role = 'ROBIN_ROLE'
+    valid_bz_url = ('&classification=Red%%20Hat&list_id=%s&query_format=advanced'
+                    '&f1=keywords&f2=%s&f3=cf_zstream_target_release'
+                    '&o1=nowordssubstr&o2=anywordssubstr&o3=isempty' %
+                    (robin_list_id, robin_role))
+    valid_bz_url += ('&chfield=%%5BBug%%20creation%%5D&chfieldfrom=%s&chfieldto=%s'
+                     % (start_date, end_date))
+
+    fields = {
+        'bug_status': ['NEW', 'ASSIGNED', 'POST', 'MODIFIED', 'ON_QA', 'VERIFIED', 'CLOSED'],
+        'rep_platform': ["Unspecified", "All", "x86_64", "ppc64", "ppc64le",
+                         "s390", "s390x", "aarch64", "arm"],
+        'product': ["Red Hat Enterprise Linux 8",
+                    "Red Hat Enterprise Linux 9",
+                    "Red Hat Enterprise Linux Advanced Virtualization"],
+        'component': ['qemu-kvm', 'kernel', 'virtio-win', 'seabios', 'edk2',
+                      'slof', 'qemu-guest-agent', 'dtc', 'kernel-rt', 'ovmf',
+                      'libtpms', 'virglrenderer', 'qemu-kvm-rhev', 'kernel-rt',
+                      'qemu-guest-agent', 'qemu-kvm-ma','kernel-alt'],
+        'resolution': ["---", "CURRENTRELEASE", "ERRATA"]}
+
+    filters = {'v1': ["ABIAssurance", "TechPreview", "ReleaseNotes", "Tracking",
+                     "Task", "HardwareEnablement", "SecurityTracking",
+                     "TestOnly", "Improvement", "FutureFeature", "Rebase",
+                     "FeatureBackport", "Documentation", "OtherQA", "RFE"],
+               'v2': kerbroes_id_list}
+    for key, value in fields.items():
+        for op in value:
+            valid_bz_url += '&%s=' % key
+            valid_bz_url += urllib.quote('%s' % op)
+
+    for key, value in filters.items():
+        valid_bz_url += '&%s=' % key
+        for op in value[:-1]:
+            valid_bz_url += urllib.quote('%s,' % op)
+        valid_bz_url += urllib.quote(value[-1])
+
+    valid_bz_url += '&api_key=mLPREvS9ArB97djTLlZBmRKeqkp8jDYrCeLX4U58'
+
+    bz_reported = valid_bz_url.replace(
+        robin_list_id, '11627322').replace(robin_role, 'reporter')
+    bz_qa_contact = valid_bz_url.replace(
+        robin_list_id, '11627320').replace(robin_role, 'qa_contact')
+    import requests
+    session = requests.Session()
+    def _get_bugs(c_url):
+        raw = session.get(rest_base_url + c_url)
+        if raw.status_code != 200 or not raw.json().has_key('bugs'):
+            logger.info(
+                '[CRON] auto_update_product_bug get bug info failed, detail: %s' % str(raw))
+            return False
+        else:
+            return raw.json()['bugs']
+
+    bug_list = _get_bugs(bz_reported)
+    bug_list.extend(_get_bugs(bz_qa_contact))
+    bug_list = reduce(lambda x, y: x if y in x else x + [y], [[], ] + bug_list)
+
+    ProductBug.objects.all().delete()
+    logger.info(
+        '[CRON] auto_update_product_bug loading bugs into db')
+    for bug in bug_list:
+        qa_contact = bug['qa_contact'].split('@')[0]
+        ProductBug.objects.create(bug_id=bug['id'],
+                                  reporter=bug['creator'].split('@')[0],
+                                  qa_contact=qa_contact,
+                                  bug_product=bug['product'],
+                                  component=bug['component'],
+                                  priority=bug['priority'],
+                                  created_at=str(utc2local_parser(bug['creation_time']))[:-6])
 
 # =================================
 # auto_load_commits_of_members()

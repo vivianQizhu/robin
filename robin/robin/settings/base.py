@@ -212,6 +212,8 @@ CRONJOBS = [
     ('15 2 * * *', 'crons.crons.auto_load_pulls'),
     ('15 3 * * *', 'crons.crons.auto_retrieve_bug_id'),
     ('15 4 * * *', 'crons.crons.auto_change_pull_state'),
+    ('15 5 * * *', 'crons.crons.auto_update_product_bug'),
+    ('15 12 * * *', 'crons.crons.auto_update_product_bug'),
 
 ]
 

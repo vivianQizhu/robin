@@ -14,6 +14,11 @@ STATS_TYPE = (
     (2, "Team"),
 )
 
+EXPORT_TYPE = (
+    (1, "Personal"),
+    (2, "Team"),
+    (3, "All"),
+)
 
 class RepositorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -72,3 +77,27 @@ class PendingSerializer(serializers.Serializer):
         if not Repository.objects.is_exist(data['repository_id']):
             raise serializers.ValidationError("repository does not exist.")
         return data
+
+
+class BugStatsSerializer(serializers.Serializer):
+    stats_type = serializers.ChoiceField(choices=STATS_TYPE, required=True)
+    team_code = serializers.CharField(required=False)
+    kerbroes_id = serializers.CharField(required=False)
+    start_date = serializers.DateField(required=True)
+    end_date = serializers.DateField(required=True)
+
+    class Meta:
+        fields = ('stats_type', 'team_code', 'kerbroes_id',
+                  'query_start_date', 'query_end_date')
+
+
+class BugExportSerializer(serializers.Serializer):
+    export_type = serializers.ChoiceField(choices=EXPORT_TYPE, required=True)
+    team_code = serializers.CharField(required=False)
+    kerbroes_id = serializers.CharField(required=False)
+    start_date = serializers.DateField(required=True)
+    end_date = serializers.DateField(required=True)
+
+    class Meta:
+        fields = ('export_type', 'team_code', 'kerbroes_id',
+                  'query_start_date', 'query_end_date')

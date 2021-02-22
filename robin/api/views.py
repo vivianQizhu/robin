@@ -1,24 +1,27 @@
 import logging
+import urllib
+from datetime import datetime, date
 
-
-from datetime import datetime
+from commons.exceptions import APIError
 from django.db.models import F
-from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.views import APIView
-from rest_framework.decorators import api_view
-
-from statistics.models import Repository, Pull, Commit, Comment
 from members.models import Team, Member
+from rest_framework.decorators import api_view
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from statistics.models import Repository, Pull, Commit, Comment, ProductBug
+
 from .serializers import (RepositorySerializer,
                           TeamSerializer,
                           PendingSerializer,
                           BasesStatsSerializer,
                           CommentStatsSerializer,
-                          MemberSerializer,)
-from commons.exceptions import APIError
+                          MemberSerializer,
+                          BugStatsSerializer)
 
 logger = logging.getLogger(__name__)
+
+PRODUCT_BUG_DATA = []
 
 
 def _paginate_response(data, request):
@@ -55,6 +58,132 @@ def _get_merged_by_kerbroes_id(github_account):
     return merged_by
 
 
+def _bug_status(start_date, end_date, kerbroes_id_list):
+    details = {}
+    cgi_base_url = ('https://bugzilla.redhat.com/buglist.cgi?columnlist=product'
+                    '%2Ccomponent%2Cassigned_to%2Cbug_status%2Cresolution'
+                    '%2Cshort_desc%2Cflagtypes.name%2Cqa_contact%2Creporter'
+                    '%2Ckeywords%2Cpriority%2Cbug_severity%2Ccf_qa_whiteboard'
+                    '%2Cversion')
+    robin_list_id = 'ROBIN_LIST_ID'
+    robin_role = 'ROBIN_ROLE'
+    valid_bz_url = ('&classification=Red%%20Hat&list_id=%s&query_format=advanced'
+                    '&f1=keywords&f2=%s&f3=cf_zstream_target_release'
+                    '&o1=nowordssubstr&o2=anywordssubstr&o3=isempty' %
+                    (robin_list_id, robin_role))
+    valid_bz_url += ('&chfield=%%5BBug%%20creation%%5D&chfieldfrom=%s&chfieldto=%s'
+                     % (start_date, end_date))
+
+    fields = {
+        'bug_status': ['NEW', 'ASSIGNED', 'POST', 'MODIFIED', 'ON_QA', 'VERIFIED', 'CLOSED'],
+        'rep_platform': ["Unspecified", "All", "x86_64", "ppc64", "ppc64le",
+                         "s390", "s390x", "aarch64", "arm"],
+        'component': ['qemu-kvm', 'kernel', 'virtio-win', 'seabios', 'edk2',
+                      'slof', 'qemu-guest-agent', 'dtc', 'kernel-rt', 'ovmf',
+                      'libtpms', 'virglrenderer', 'qemu-kvm-rhev', 'kernel-rt',
+                      'qemu-guest-agent', 'qemu-kvm-ma', 'kernel-alt'],
+        'resolution': ["---", "CURRENTRELEASE", "ERRATA"]}
+
+    filters = {'v1': ["ABIAssurance", "TechPreview", "ReleaseNotes", "Tracking",
+                     "Task", "HardwareEnablement", "SecurityTracking",
+                     "TestOnly", "Improvement", "FutureFeature", "Rebase",
+                     "FeatureBackport", "Documentation", "OtherQA", "RFE"],
+               'v2': kerbroes_id_list}
+    product = {'rhel8': ["Red Hat Enterprise Linux 8",
+                         "Red Hat Enterprise Linux Advanced Virtualization"],
+               'rhel9': ["Red Hat Enterprise Linux 9"]}
+
+    for key, value in fields.items():
+        for op in value:
+            valid_bz_url += '&%s=' % key
+            valid_bz_url += urllib.quote(op)
+
+    for key, value in filters.items():
+        valid_bz_url += '&%s=' % key
+        for op in value[:-1]:
+            valid_bz_url += urllib.quote('%s,' % op)
+        valid_bz_url += urllib.quote(value[-1])
+
+    valid_bz_url += '&api_key=mLPREvS9ArB97djTLlZBmRKeqkp8jDYrCeLX4U58'
+    product_names = product.keys()
+    product_names.append('all')
+
+    def get_num_and_link(list_id, bz_filter='reporter', high=False):
+        product_num = dict.fromkeys(product_names, 0)
+        url_list = {}
+        url_r = cgi_base_url + valid_bz_url.replace(
+            robin_list_id, list_id).replace(robin_role, bz_filter)
+        if high:
+            url_r += '&priority=urgent&priority=high'
+        product_filter_str = ''
+        for key, value in product.items():
+            url_r_tmp = url_r
+            for p_name in value:
+                product_filter_tmp = '&product=' + urllib.quote(p_name)
+                url_r_tmp += product_filter_tmp
+                product_filter_str += product_filter_tmp
+                filter_dict = {'bug_product': p_name}
+                for kerbroes_id in kerbroes_id_list:
+                    filter_dict.update({bz_filter: kerbroes_id})
+                    if high:
+                        filter_dict.update({'priority': 'high'})
+                    bugs = ProductBug.objects.filter(**filter_dict).filter(
+                        created_at__range=(start_date, end_date))
+                    if high:
+                        filter_dict.update({'priority': 'urgent'})
+                        bugs = bugs | ProductBug.objects.filter(**filter_dict).filter(
+                            created_at__range=(start_date, end_date))
+                    if bz_filter == 'reporter':
+                        new_count = 0
+                        for bug in bugs:
+                            if bug.qa_contact in kerbroes_id_list:
+                                new_count += 1
+                    else:
+                        new_count = bugs.count()
+                    product_num.update({key: new_count + product_num[key]})
+                    product_num.update({'all': product_num['all'] + new_count})
+            url_list.update({key: url_r_tmp})
+        url_list.update({'all': url_r + product_filter_str})
+
+        return product_num, url_list
+
+    bz_reported_nums, bz_reported_urls = get_num_and_link('11627322', 'reporter')
+    bz_qa_contact_nums, bz_qa_contact_urls = get_num_and_link(
+        '11627320', 'qa_contact')
+    bz_reported_nums_high, bz_reported_urls_high = get_num_and_link(
+        '11627322', 'reporter', True)
+    bz_qa_contact_nums_high, bz_qa_contact_urls_high = get_num_and_link(
+        '11627320', 'qa_contact', True)
+
+    def ratio(num, den):
+        valid_bz_ratio = 0
+        if den != 0:
+            valid_bz_ratio = "%.2f%%" % (float(num)/float(den)*100)
+        return valid_bz_ratio
+
+    for product_name in product_names:
+        reported_num = bz_reported_nums[product_name]
+        qa_contact_num = bz_qa_contact_nums[product_name]
+        total_valid_bz_ratio = ratio(reported_num, qa_contact_num)
+        reported_num_high = bz_reported_nums_high[product_name]
+        qa_contact_num_high = bz_qa_contact_nums_high[product_name]
+        high_ratio = ratio(reported_num_high, qa_contact_num_high)
+        details.update(
+            {'total_valid_bz_ratio_%s' % (product_name): total_valid_bz_ratio,
+             'total_reported_%s' % (product_name): reported_num,
+             'total_reported_url_%s' % (product_name): bz_reported_urls[product_name],
+             'total_qa_contact_%s' % (product_name): qa_contact_num,
+             'total_qa_contact_url_%s' % (product_name): bz_qa_contact_urls[product_name],
+             'high_ratio_%s' % (product_name): high_ratio,
+             'high_reported_%s' % (product_name): reported_num_high,
+             'high_reported_url_%s' % (product_name): bz_reported_urls_high[product_name],
+             'high_qa_contact_%s' % (product_name): qa_contact_num_high,
+             'high_qa_contact_url_%s' % (product_name): bz_qa_contact_urls_high[product_name]
+             })
+
+    return details
+
+
 class CustomPagination(PageNumberPagination):
     def get_paginated_response(self, data):
         return Response({
@@ -79,6 +208,33 @@ class RepoListView(APIView):
         result_page = paginator.paginate_queryset(repositories, request)
         serializer = RepositorySerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
+
+
+class BugListView(APIView):
+    """ returns bug status for the whole group"""
+
+    def get(self, request, format=None):
+        logger.info('[bug_status] Received data is valid.')
+        details = []
+        end_date = date.today()
+        start_date = date(end_date.year, 1, 1)
+        # Whole team data
+        members = Member.objects.all()
+        kerbroes_id_list = [member.kerbroes_id for member in members]
+        d = _bug_status(start_date, end_date, kerbroes_id_list)
+        d.update({'team': 'KVM_QE_ALL'})
+        details.append(d)
+        # Subteam data
+        teams = Team.objects.all()
+        for team in teams:
+            members = Member.objects.filter(team=team)
+            kerbroes_id_list = [member.kerbroes_id for member in members]
+            d = _bug_status(start_date, end_date, kerbroes_id_list)
+            d.update({'team': team.team_name})
+            details.append(d)
+        PRODUCT_BUG_DATA = details
+        response = _paginate_response(details, request)
+        return response
 
 
 class TeamListView(APIView):
@@ -392,6 +548,34 @@ def comment_stats(request):
             return response
         raise APIError(APIError.INVALID_REQUEST_DATA, detail=serializer.errors)
     raise APIError(APIError.INVALID_REQUEST_METHOD, detail='Does Not Support Post Method')
+
+
+@api_view(['GET'])
+def bug_status_team(request):
+    logger.info('[bug_status] Received data : %s' % request.query_params)
+    if request.method == 'GET':
+        serializer = BugStatsSerializer(data=request.query_params)
+        if serializer.is_valid():
+            details = []
+            logger.info('[bug_status] Received data is valid.')
+            start_date = serializer.validated_data['start_date']
+            end_date = serializer.validated_data['end_date']
+            kerbroes_id_list = _stats_type_sortor(
+                serializer.validated_data['stats_type'],
+                serializer.validated_data.get('team_code', ''),
+                serializer.validated_data.get('kerbroes_id', ''))
+            det = _bug_status(start_date, end_date, kerbroes_id_list)
+            if len(kerbroes_id_list) > 1:
+                name = 'ALL'
+            else:
+                name = ''
+            det.update({'team': name})
+            details.append(det)
+            response = _paginate_response(details, request)
+            return response
+        raise APIError(APIError.INVALID_REQUEST_DATA, detail=serializer.errors)
+    raise APIError(APIError.INVALID_REQUEST_METHOD,
+                   detail='Does Not Support Post Method')
 
 # from django.shortcuts import render
 # from chartit import DataPool, Chart

@@ -53,7 +53,7 @@ PROJECT_ASCII_NAME = '''\
 |/   \__/(_______)|/ \___/ \_______/|/    )_)
 '''
 env.port = 22
-env.git_branch = 'master'
+env.git_branch = 'product'
 env.venv_name = '.env'
 env.guni_ip = '0.0.0.0'
 env.guni_port = 8108

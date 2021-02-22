@@ -15,93 +15,176 @@
     <div class="page-header">
           <h1>Dashboard</h1>
     </div>
-    <h3>Repositories</h3>
-    <div class="row">
-        <div class="col-md-12">
+    <h3>Project</h3>
+    <ul class="nav nav-tabs" >
+        <li class="active">
+            <a data-toggle="tab" href="#automation" @click="setProduct">Repositories</a>
+        </li>
+        <li><a data-toggle="tab" href="#product" @click="setAllProduct">Product</a></li>
+    </ul>
+
+    <div class="tab-content">
+        <div id="automation" class="tab-pane fade in active">
+            <div class="row">
+                <div class="col-md-12">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <!-- <th>Repo Owner</th> -->
+                                <th>Repository Name</th>
+                                <th>Pending Information</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="repo in repoData.repos">
+                                <td class="left"><input type="checkbox" v-model="repo.checked" @click="chooseRepo(repo)"> ${repoData.repos.indexOf(repo) + 1}</td>
+                                <!-- td>${repo.owner}</td> ${repo.id}-->
+                                <td>${repo.repo}</td>
+                                <td><button id="p-btn${repo.id}" type="button" class="btn btn-xs btn-primary" @click="showPending(repo)">Show</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- class="row" -->
+
+            <div id="pending-patchs" style="display:none;" >
+                <div v-if="pendingData.count>0" transition="expand" v-cloak>
+                    <!-- <div class="alert alert-warning" role="alert"> -->
+                        <div class="col-md-12">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Patch No.</th>
+                                        <th>Repo</th>
+                                        <th>Title</th>
+                                        <th>Bug ID</th>
+                                        <th>Author</th>
+                                        <th>Team</th>
+                                        <th>Reviews</th>
+                                        <th>Current Pending</th>
+                                        <th>Updated Date</th>
+                                        <th>Total Pending</th>
+                                        <th>Created Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="pendingPatch in pendingData.pendingPatchs">
+                                        <td><a href="${pendingPatch.patch_url}">${pendingPatch.patch_number}</a></td>
+                                        <td>${pendingPatch.repo}</td>
+                                        <td>${pendingPatch.patch_title}</td>
+                                        <td>${pendingPatch.bug_id}</td>
+                                        <td>${pendingPatch.author}</td>
+                                        <td>${pendingPatch.team}</td>
+                                        <td>${pendingPatch.reviews}</td>
+                                        <td>${pendingPatch.last_updated} day(s)</td>
+                                        <td>${pendingPatch.updated_at}</td>
+                                        <td>${pendingPatch.total_pending} day(s)</td>
+                                        <td>${pendingPatch.create_at}</td>
+                                    </tr>
+                                    <tr class="info">
+                                    <td>Summary</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>${pendingData.count} patches</td>
+                                </tbody>
+                            </table>
+                        </div>
+                    <!-- </div> -->
+                </div>
+
+                <div v-else>
+                    <div class="alert alert-success" role="alert">
+                    There is no pending patchs in this repository.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="product" class="tab-pane fade">
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <!-- <th>Repo Owner</th> -->
-                        <th>Repository Name</th>
-                        <th>Pending Information</th>
+                        <th>Team Name</th>
+                        <th>Catch BZs Ratio</th>
+                        <th>Reported</th>
+                        <th>QA Contact</th>
+                        <th>High&Above Catch Ratio</th>
+                        <th>Reported</th>
+                        <th>QA Contact</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="repo in repoData.repos">
-                        <td class="left"><input type="checkbox" v-model="repo.checked" @click="chooseRepo(repo)"> ${repoData.repos.indexOf(repo) + 1}</td>
-                        <!-- td>${repo.owner}</td> ${repo.id}-->
-                        <td>${repo.repo}</td>
-                        <td><button id="p-btn${repo.id}" type="button" class="btn btn-xs btn-primary" @click="showPending(repo)">Show</button></td>
+                    <tr>
+                        <td style="text-align:left;font-weight:bold">Summary</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr v-for="item in productAll.results">
+                        <td>${item.team}</td>
+                        <td>${item.total_valid_bz_ratio_all}</td>
+                        <td><a href="${item.total_reported_url_all}">${item.total_reported_all}</a></td>
+                        <td><a href="${item.total_qa_contact_url_all}">${item.total_qa_contact_all}</a></td>
+                        <td>${item.high_ratio_all}</td>
+                        <td><a href="${item.high_reported_url_all}">${item.high_reported_all}</a></td>
+                        <td><a href="${item.high_qa_contact_url_all}">${item.high_qa_contact_all}</a></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;font-weight:bold">RHEL 8</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr v-for="item in productAll.results">
+                        <td>${item.team}</td>
+                        <td>${item.total_valid_bz_ratio_rhel8}</td>
+                        <td><a href="${item.total_reported_url_rhel8}">${item.total_reported_rhel8}</a></td>
+                        <td><a href="${item.total_qa_contact_url_rhel8}">${item.total_qa_contact_rhel8}</a></td>
+                        <td>${item.high_ratio_rhel8}</td>
+                        <td><a href="${item.high_reported_url_rhel8}">${item.high_reported_rhel8}</a></td>
+                        <td><a href="${item.high_qa_contact_url_rhel8}">${item.high_qa_contact_rhel8}</a></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;font-weight:bold">RHEL 9</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr v-for="item in productAll.results">
+                        <td>${item.team}</td>
+                        <td>${item.total_valid_bz_ratio_rhel9}</td>
+                        <td><a href="${item.total_reported_url_rhel9}">${item.total_reported_rhel9}</a></td>
+                        <td><a href="${item.total_qa_contact_url_rhel9}">${item.total_qa_contact_rhel9}</a></td>
+                        <td>${item.high_ratio_rhel9}</td>
+                        <td><a href="${item.high_reported_url_rhel9}">${item.high_reported_rhel9}</a></td>
+                        <td><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
                     </tr>
                 </tbody>
             </table>
         </div>
+    </div>
 
-    </div> 
-    <!-- class="row" -->
-
-        <div id="pending-patchs" style="display:none;" >
-            <div v-if="pendingData.count>0" transition="expand" v-cloak>
-                <!-- <div class="alert alert-warning" role="alert"> -->
-                    <div class="col-md-12">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Patch No.</th>
-                                    <th>Repo</th>
-                                    <th>Title</th>
-                                    <th>Bug ID</th>
-                                    <th>Author</th>
-                                    <th>Team</th>
-                                    <th>Reviews</th>
-                                    <th>Current Pending</th>
-                                    <th>Updated Date</th>
-                                    <th>Total Pending</th>
-                                    <th>Created Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="pendingPatch in pendingData.pendingPatchs">
-                                    <td><a href="${pendingPatch.patch_url}">${pendingPatch.patch_number}</a></td>
-                                    <td>${pendingPatch.repo}</td> 
-                                    <td>${pendingPatch.patch_title}</td>
-                                    <td>${pendingPatch.bug_id}</td>
-                                    <td>${pendingPatch.author}</td>
-                                    <td>${pendingPatch.team}</td>
-                                    <td>${pendingPatch.reviews}</td>
-                                    <td>${pendingPatch.last_updated} day(s)</td>
-                                    <td>${pendingPatch.updated_at}</td>
-                                    <td>${pendingPatch.total_pending} day(s)</td>
-                                    <td>${pendingPatch.create_at}</td>
-                                </tr>
-                                <tr class="info">
-                                <td>Summary</td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td>${pendingData.count} patches</td>
-                            </tbody>
-                        </table>
-                    </div>
-                <!-- </div> -->
-            </div>
-
-            <div v-else>
-                <div class="alert alert-success" role="alert">
-                There is no pending patchs in this repository.
-                </div>
-            </div>
-        </div>
-  
- 
 
     <!-- ==================================================nav tab -->
     <h3>Teams</h3>
@@ -180,7 +263,7 @@
                          <table class="table ">
                          <!-- !!!!!! -->
                             <tr v-if="!settleAllState">
-                                <td><strong>Repo Name:</strong></td>
+                                <td><strong>Project:</strong></td>
                                 <td style="text-align: left"><span v-for="item in repoTmp" style="margin-right: 5px;">${item.repo}</span></td>
                                 <td><strong>Team Name:</strong></td>
                                 <td style="text-align: left"><span v-for="item in teamTmp" style="margin-right: 5px;">${item.team_name}</span>
@@ -241,7 +324,7 @@
                          <table class="table">
                          <!-- !!!!!! -->
                             <tr v-if="!settleAllState">
-                                <td><strong>Repo Name:</strong></td>
+                                <td><strong>Project:</strong></td>
                                 <td style="text-align: left"><span v-for="item in repoTmp" style="margin-right: 5px;">${item.repo}</span></td>
                                 <td><strong>Member Name:</strong></td>
                                 <td style="text-align: left"><span v-for="item in memberTmp" style="margin-right: 5px;">${item.name}</span>
@@ -284,267 +367,428 @@
             </div>
         </div>
     </div>
+
+  <!-- ============================= -->
+
+        <!-- productModal -->
+   <div class="modal fade" id="productTeamModal" tabindex="-1" role="dialog" aria-labelledby="productTeamModalLabel">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="productTeamModalLabel">Summary</h4>
+                </div>
+                <div class="modal-body">
+                         <table class="table ">
+                         <!-- !!!!!! -->
+                            <tr v-if="!settleAllState">
+                                <td><strong>Project:</strong></td>
+                                <td style="text-align: left"><span style="margin-right: 5px;">product</span></td>
+                                <td><strong>Team Name:</strong></td>
+                                <td style="text-align: left"><span v-for="item in teamTmp" style="margin-right: 5px;">${item.team_name}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Start From:</strong></td>
+                                <td style="text-align: left">
+                                    <input class="input" id="p_t_start_date" v-model="beginTime">
+                                </td>
+                                <td><strong>End Until:</strong></td>
+                                <td style="text-align: left">
+                                    <input class="input" id="p_t_end_date" v-model="endTime">
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div class="alert alert-${alertType}" role="alert" v-show="msg.length >0" v-cloak>
+                            <p>${msg}</p>
+                        </div>
+                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @click="submitProductTeam">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+      <!-- ============================= -->
+
+   <div class="modal fade" id="productMemberModal" tabindex="-1" role="dialog" aria-labelledby="productMemberModalLabel">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="productMemberModalLabel">Summary</h4>
+                </div>
+                <div class="modal-body">
+                         <table class="table ">
+                         <!-- !!!!!! -->
+                            <tr v-if="!settleAllState">
+                                <td><strong>Project:</strong></td>
+                                <td style="text-align: left"><span style="margin-right: 5px;">product</span></td>
+                                <td><strong>Member Name:</strong></td>
+                                <td style="text-align: left"><span v-for="item in memberTmp" style="margin-right: 5px;">${item.name}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Start From:</strong></td>
+                                <td style="text-align: left">
+                                    <input class="input" id="p_m_start_date" v-model="beginTime">
+                                </td>
+                                <td><strong>End Until:</strong></td>
+                                <td style="text-align: left">
+                                    <input class="input" id="p_m_end_date" v-model="endTime">
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div class="alert alert-${alertType}" role="alert" v-show="msg.length >0" v-cloak>
+                            <p>${msg}</p>
+                        </div>
+                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @click="submitProductMember">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
+
+
 <!-- ============================= res =============================-->
 <div v-if="hasRes" transition="expand" v-cloak>
-    <div v-if="category == 'closedPatchs'">
-        <h3 style="float:left">Merged Patches</h3>
+    <div v-if="isProduct == true">
+        <h3 style="float:left">Product Data</h3>
         <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
         <hr style="width:100%">
         <table class="table table-striped" >
             <thead>
                 <tr>
-                    <th>Patch No.</th>
-                    <th>Repo</th>
-                    <th>Patch Title</th>
-                    <th>Bug ID</th>
-                    <th>Is Merged</th>
-                    <th>Author</th>
-                    <th>Commits</th>
-                    <th>Additions</th>
-                    <th>Deletions</th>
-                    <th>Changed Files</th>
-                    <th>Created at</th>
-                    <th>Updated at</th>
-                    <th>Closed at</th>
-                    <th>Merged by</th>
+                    <th>Catch BZs Ratio</th>
+                    <th>Reported</th>
+                    <th>QA Contact</th>
+                    <th>High&Above Catch Ratio</th>
+                    <th>Reported</th>
+                    <th>QA Contact</th>
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="item in resData.results">
-                    <td><a href="${item.patch_url}">${item.patch_number}</a></td>
-                    <td>${item.repo}</td> 
-                    <td>${item.patch_title}</td>
-                    <td>${item.bug_id}</td>
-                    <td>${item.pull_merged}</td>
-                    <td>${item.author}</td>
-                    <td>${item.commits}</td>
-                    <td>${item.additions}</td>
-                    <td>${item.deletions}</td>
-                    <td>${item.changed_files}</td>
-                    <td>${item.created_at}</td>
-                    <td>${item.updated_at}</td>
-                    <td>${item.closed_at}</td>
-                    <td>${item.merged_by}</td>
+                <tr>
+                    <td style="text-align:left;font-weight:bold">Summary</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                 </tr>
-                <tr class="info">
-                    <td>Summary</td>
+                <tr v-for="item in resData.results">
+                    <td>${item.total_valid_bz_ratio_all}</td>
+                    <td><a href="${item.total_reported_url_all}">${item.total_reported_all}</a></td>
+                    <td><a href="${item.total_qa_contact_url_all}">${item.total_qa_contact_all}</a></td>
+                    <td>${item.high_ratio_all}</td>
+                    <td><a href="${item.high_reported_url_all}">${item.high_reported_all}</a></td>
+                    <td><a href="${item.high_qa_contact_url_all}">${item.high_qa_contact_all}</a></td>
+                </tr>
+                <tr>
+                    <td style="text-align:left;font-weight:bold">RHEL 8</td>
                     <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
+                </tr>
+                <tr v-for="item in resData.results">
+                    <td>${item.total_valid_bz_ratio_rhel8}</td>
+                    <td><a href="${item.total_reported_url_rhel8}">${item.total_reported_rhel8}</a></td>
+                    <td><a href="${item.total_qa_contact_url_rhel8}">${item.total_qa_contact_rhel8}</a></td>
+                    <td>${item.high_ratio_rhel8}</td>
+                    <td><a href="${item.high_reported_url_rhel8}">${item.high_reported_rhel8}</a></td>
+                    <td><a href="${item.high_qa_contact_url_rhel8}">${item.high_qa_contact_rhel8}</a></td>
+                </tr>
+                <tr>
+                    <td style="text-align:left;font-weight:bold">RHEL 9</td>
                     <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
-                    <td></td>
-                    <td></td>
-                    <td>${resData.count} patches</td>
+                </tr>
+                <tr v-for="item in resData.results">
+                    <td>${item.total_valid_bz_ratio_rhel9}</td>
+                    <td><a href="${item.total_reported_url_rhel9}">${item.total_reported_rhel9}</a></td>
+                    <td><a href="${item.total_qa_contact_url_rhel9}">${item.total_qa_contact_rhel9}</a></td>
+                    <td>${item.high_ratio_rhel9}</td>
+                    <td><a href="${item.high_reported_url_rhel9}">${item.high_reported_rhel9}</a></td>
+                    <td><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
                 </tr>
             </tbody>
         </table>
+        <div>The statistic does not include exceptions, please check the bz link for more details</div>
     </div>
 
-    <div v-if="category == 'openingPatchs'">
-        <h3 style="float:left">Submitted Patches</h3>
-        <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
-        <hr style="width:100%">
-        <table class="table table-striped" >
-            <thead>
-                <tr>
-                    <th>Patch No.</th>
-                    <th>Repo</th>
-                    <th>Patch Title</th>
-                    <th>Bug ID</th>
-                    <th>Is Merged</th>
-                    <th>Author</th>
-                    <th>Commits</th>
-                    <th>Additions</th>
-                    <th>Deletions</th>
-                    <th>Changed Files</th>
-                    <th>Created at</th>
-                    <th>Updated at</th>
-                    <th>Closed at</th>
-                    <th>Merged by</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="item in resData.results">
-                    <td><a href="${item.patch_url}">${item.patch_number}</a></td>
-                    <td>${item.repo}</td> 
-                    <td>${item.patch_title}</td>
-                    <td>${item.bug_id}</td>
-                    <td>${item.pull_merged}</td>
-                    <td>${item.author}</td>
-                    <td>${item.commits}</td>
-                    <td>${item.additions}</td>
-                    <td>${item.deletions}</td>
-                    <td>${item.changed_files}</td>
-                    <td>${item.created_at}</td>
-                    <td>${item.updated_at}</td>
-                    <td>${item.closed_at}</td>
-                    <td>${item.merged_by}</td>
-                </tr>
-                <tr class="info">
-                    <td>Summary</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td>${resData.count} patches</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+    <div v-if="isProduct == false">
+        <div v-if="category == 'closedPatchs'">
+            <h3 style="float:left">Merged Patches</h3>
+            <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
+            <hr style="width:100%">
+            <table class="table table-striped" >
+                <thead>
+                    <tr>
+                        <th>Patch No.</th>
+                        <th>Repo</th>
+                        <th>Patch Title</th>
+                        <th>Bug ID</th>
+                        <th>Is Merged</th>
+                        <th>Author</th>
+                        <th>Commits</th>
+                        <th>Additions</th>
+                        <th>Deletions</th>
+                        <th>Changed Files</th>
+                        <th>Created at</th>
+                        <th>Updated at</th>
+                        <th>Closed at</th>
+                        <th>Merged by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in resData.results">
+                        <td><a href="${item.patch_url}">${item.patch_number}</a></td>
+                        <td>${item.repo}</td>
+                        <td>${item.patch_title}</td>
+                        <td>${item.bug_id}</td>
+                        <td>${item.pull_merged}</td>
+                        <td>${item.author}</td>
+                        <td>${item.commits}</td>
+                        <td>${item.additions}</td>
+                        <td>${item.deletions}</td>
+                        <td>${item.changed_files}</td>
+                        <td>${item.created_at}</td>
+                        <td>${item.updated_at}</td>
+                        <td>${item.closed_at}</td>
+                        <td>${item.merged_by}</td>
+                    </tr>
+                    <tr class="info">
+                        <td>Summary</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>${resData.count} patches</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <div v-if="category == 'updatedPatchs'">
-        <h3 style="float:left;">Updated Patches</h3>
-        <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
-        <hr style="width:100%">
-        <table class="table table-striped" >
-            <thead>
-                <tr>
-                    <th>Patch No.</th>
-                    <th>Repo</th>
-                    <th>Patch Title</th>
-                    <th>Bug ID</th>
-                    <th>Is Merged</th>
-                    <th>Author</th>
-                    <th>Commits</th>
-                    <th>Additions</th>
-                    <th>Deletions</th>
-                    <th>Changed Files</th>
-                    <th>Created at</th>
-                    <th>Updated at</th>
-                    <th>Closed at</th>
-                    <th>Merged by</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="item in resData.results">
-                    <td><a href="${item.patch_url}">${item.patch_number}</a></td>
-                    <td>${item.repo}</td> 
-                    <td>${item.patch_title}</td>
-                    <td>${item.bug_id}</td>
-                    <td>${item.pull_merged}</td>
-                    <td>${item.author}</td>
-                    <td>${item.commits}</td>
-                    <td>${item.additions}</td>
-                    <td>${item.deletions}</td>
-                    <td>${item.changed_files}</td>
-                    <td>${item.created_at}</td>
-                    <td>${item.updated_at}</td>
-                    <td>${item.closed_at}</td>
-                    <td>${item.merged_by}</td>
-                </tr>
-                <tr class="info">
-                    <td>Summary</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td>${resData.count} patches</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <div v-if="category == 'openingPatchs'">
+            <h3 style="float:left">Submitted Patches</h3>
+            <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
+            <hr style="width:100%">
+            <table class="table table-striped" >
+                <thead>
+                    <tr>
+                        <th>Patch No.</th>
+                        <th>Repo</th>
+                        <th>Patch Title</th>
+                        <th>Bug ID</th>
+                        <th>Is Merged</th>
+                        <th>Author</th>
+                        <th>Commits</th>
+                        <th>Additions</th>
+                        <th>Deletions</th>
+                        <th>Changed Files</th>
+                        <th>Created at</th>
+                        <th>Updated at</th>
+                        <th>Closed at</th>
+                        <th>Merged by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in resData.results">
+                        <td><a href="${item.patch_url}">${item.patch_number}</a></td>
+                        <td>${item.repo}</td>
+                        <td>${item.patch_title}</td>
+                        <td>${item.bug_id}</td>
+                        <td>${item.pull_merged}</td>
+                        <td>${item.author}</td>
+                        <td>${item.commits}</td>
+                        <td>${item.additions}</td>
+                        <td>${item.deletions}</td>
+                        <td>${item.changed_files}</td>
+                        <td>${item.created_at}</td>
+                        <td>${item.updated_at}</td>
+                        <td>${item.closed_at}</td>
+                        <td>${item.merged_by}</td>
+                    </tr>
+                    <tr class="info">
+                        <td>Summary</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>${resData.count} patches</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <div v-if="category == 'commits'">
-        <h3 style="float:left">Commits</h3>
-        <h5 style="float:right; line-height: 60px">${resData.count} in total</h5>
-        <hr style="width:100%">
-        <table class="table table-striped" >
-            <thead>
-                <tr>
-                    <th>Patch No.</th>
-                    <th>Sha</th>
-                    <th>Author</th>
-                    <th>Message</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="item in resData.results">
-                    <td>${item.patch_number}</td>
-                    <td>${item.sha}</td>
-                    <td>${item.author}</td>
-                    <td>${item.message}</td>
-                    <td>${item.date}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <div v-if="category == 'updatedPatchs'">
+            <h3 style="float:left;">Updated Patches</h3>
+            <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
+            <hr style="width:100%">
+            <table class="table table-striped" >
+                <thead>
+                    <tr>
+                        <th>Patch No.</th>
+                        <th>Repo</th>
+                        <th>Patch Title</th>
+                        <th>Bug ID</th>
+                        <th>Is Merged</th>
+                        <th>Author</th>
+                        <th>Commits</th>
+                        <th>Additions</th>
+                        <th>Deletions</th>
+                        <th>Changed Files</th>
+                        <th>Created at</th>
+                        <th>Updated at</th>
+                        <th>Closed at</th>
+                        <th>Merged by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in resData.results">
+                        <td><a href="${item.patch_url}">${item.patch_number}</a></td>
+                        <td>${item.repo}</td>
+                        <td>${item.patch_title}</td>
+                        <td>${item.bug_id}</td>
+                        <td>${item.pull_merged}</td>
+                        <td>${item.author}</td>
+                        <td>${item.commits}</td>
+                        <td>${item.additions}</td>
+                        <td>${item.deletions}</td>
+                        <td>${item.changed_files}</td>
+                        <td>${item.created_at}</td>
+                        <td>${item.updated_at}</td>
+                        <td>${item.closed_at}</td>
+                        <td>${item.merged_by}</td>
+                    </tr>
+                    <tr class="info">
+                        <td>Summary</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>${resData.count} patches</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <div v-if="category == 'comments'">
-        <h3 style="float:left">Reviews</h3>
-        <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
-        <hr style="width:100%">
-        <table class="table table-striped table-hover table-bordered" >
-            <thead>
-                <tr>
-                    <th>Patch No.</th>
-                    <th>Repo</th>
-                    <th>Comment ID</th>
-                    <th>Author</th>
-                    <th>Content</th>
-                    <th>Created at</th>
-                    <th>Updated at</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="itemList in resData.results[0].data">
-                    <td><a href="${itemList[0].patch_url}">${itemList[0].patch_number}</a></td>
-                    <td>${itemList[0].repo}</td>
-                    <td><ul style="list-style-type:none;padding:0" v-for="item in itemList" >
-                         <li>${item.comment_id}</li>
-                       </ul>
-                    </td>
-                    <td><ul style="list-style-type:none;padding:0" v-for="item in itemList">
-                         <li>${item.author}</li>
-                       </ul>
-                    </td>
-                    <td style="max-width: 654px;word-wrap:break-word;"><ul style="list-style-type:none;padding:0" v-for="item in itemList">
-                         <li>${item.body}</li>
-                       </ul>
-                    </td>                   
-                    <td><ul style="list-style-type:none;padding:0" v-for="item in itemList">
-                         <li>${item.created_at}</li>
-                       </ul>
-                    </td> 
-                    <td><ul style="list-style-type:none;padding:0" v-for="item in itemList">
-                         <li>${item.updated_at}</li>
-                       </ul>
-                    </td>                
-                </tr>
-                <tr class="info">
-                    <td>Summary</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td>${resData.results[0].patch_count} patches</td>
-                    <td>${resData.results[0].review_count} reviews</td>
-                </tr>
-            </tbody>
-        </table>
+        <div v-if="category == 'commits'">
+            <h3 style="float:left">Commits</h3>
+            <h5 style="float:right; line-height: 60px">${resData.count} in total</h5>
+            <hr style="width:100%">
+            <table class="table table-striped" >
+                <thead>
+                    <tr>
+                        <th>Patch No.</th>
+                        <th>Sha</th>
+                        <th>Author</th>
+                        <th>Message</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in resData.results">
+                        <td>${item.patch_number}</td>
+                        <td>${item.sha}</td>
+                        <td>${item.author}</td>
+                        <td>${item.message}</td>
+                        <td>${item.date}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div v-if="category == 'comments'">
+            <h3 style="float:left">Reviews</h3>
+            <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
+            <hr style="width:100%">
+            <table class="table table-striped table-hover table-bordered" >
+                <thead>
+                    <tr>
+                        <th>Patch No.</th>
+                        <th>Repo</th>
+                        <th>Comment ID</th>
+                        <th>Author</th>
+                        <th>Content</th>
+                        <th>Created at</th>
+                        <th>Updated at</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="itemList in resData.results[0].data">
+                        <td><a href="${itemList[0].patch_url}">${itemList[0].patch_number}</a></td>
+                        <td>${itemList[0].repo}</td>
+                        <td><ul style="list-style-type:none;padding:0" v-for="item in itemList" >
+                             <li>${item.comment_id}</li>
+                           </ul>
+                        </td>
+                        <td><ul style="list-style-type:none;padding:0" v-for="item in itemList">
+                             <li>${item.author}</li>
+                           </ul>
+                        </td>
+                        <td style="max-width: 654px;word-wrap:break-word;"><ul style="list-style-type:none;padding:0" v-for="item in itemList">
+                             <li>${item.body}</li>
+                           </ul>
+                        </td>
+                        <td><ul style="list-style-type:none;padding:0" v-for="item in itemList">
+                             <li>${item.created_at}</li>
+                           </ul>
+                        </td>
+                        <td><ul style="list-style-type:none;padding:0" v-for="item in itemList">
+                             <li>${item.updated_at}</li>
+                           </ul>
+                        </td>
+                    </tr>
+                    <tr class="info">
+                        <td>Summary</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>${resData.results[0].patch_count} patches</td>
+                        <td>${resData.results[0].review_count} reviews</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 <!-- ============================= res =============================-->

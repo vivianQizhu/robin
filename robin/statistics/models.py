@@ -144,3 +144,31 @@ class Comment(Timestampable, models.Model):
 
     def __unicode__(self):
         return str(self.comment_id)
+
+
+class ProductBugManager(models.Manager):
+
+    def is_exist(self, bug_id):
+        return True if self.get_queryset().filter(bug_id=bug_id) else False
+
+
+class ProductBug(models.Model):
+    """
+    Defines fields of a product bug.
+    """
+    bug_id = models.IntegerField(unique=True, verbose_name='bug id')
+    reporter = models.CharField(max_length=32, verbose_name='bug reporter')
+    qa_contact = models.CharField(max_length=32, verbose_name='bug qa_contact')
+    bug_product = models.CharField(max_length=100, verbose_name='bug product')
+    component = models.CharField(max_length=32, verbose_name='bug component')
+    priority = models.CharField(max_length=32, verbose_name='bug priority')
+    created_at = models.DateTimeField(verbose_name='bug created date')
+
+    objects = ProductBugManager()
+
+    class Meta:
+        verbose_name = _('product_bug')
+        verbose_name_plural = _('product_bugs')
+
+    def __unicode__(self):
+        return str(self.bug_id)
