@@ -174,7 +174,7 @@ var reopData = new Vue({
             if (this.category == 'openingPatchs'){
                 get('/api/stats/opening-patchs', {
                     repository_id: repo_ids.join(','),
-                    stats_type: self.type,
+                    stats_type: 1,
                     kerbroes_id: kerbroes_ids.join(','),
                     start_date: self.beginTime,
                     end_date: self.endTime
@@ -188,7 +188,7 @@ var reopData = new Vue({
             if (this.category == 'updatedPatchs'){
                 get('/api/stats/updated-patchs', {
                     repository_id: repo_ids.join(','),
-                    stats_type: self.type,
+                    stats_type: 1,
                     kerbroes_id: kerbroes_ids.join(','),
                     start_date: self.beginTime,
                     end_date: self.endTime
@@ -202,7 +202,7 @@ var reopData = new Vue({
             if (this.category == 'closedPatchs'){
                 get('/api/stats/closed-patchs', {
                     repository_id: repo_ids.join(','),
-                    stats_type: self.type,
+                    stats_type: 1,
                     kerbroes_id: kerbroes_ids.join(','),
                     start_date: self.beginTime,
                     end_date: self.endTime
@@ -218,7 +218,7 @@ var reopData = new Vue({
             if (this.category == 'commits'){
                 get('/api/stats/commits', {
                     repository_id: repo_ids.id,
-                    stats_type: self.type,
+                    stats_type: 1,
                     kerbroes_id: kerbroes_ids.join(','),
                     start_date: self.beginTime,
                     end_date: self.endTime
@@ -274,7 +274,7 @@ var reopData = new Vue({
             if (this.category == 'openingPatchs'){
                 get('/api/stats/opening-patchs', {
                     repository_id: repo_ids.join(','),
-                    stats_type: self.type,
+                    stats_type: 1,
                     kerbroes_id: kerbroes_ids.join(','),
                     start_date: self.beginTime,
                     end_date: self.endTime
@@ -288,7 +288,7 @@ var reopData = new Vue({
             if (this.category == 'updatedPatchs'){
                 get('/api/stats/updated-patchs', {
                     repository_id: repo_ids.join(','),
-                    stats_type: self.type,
+                    stats_type: 1,
                     kerbroes_id: kerbroes_ids.join(','),
                     start_date: self.beginTime,
                     end_date: self.endTime
@@ -302,7 +302,7 @@ var reopData = new Vue({
             if (this.category == 'closedPatchs'){
                 get('/api/stats/closed-patchs', {
                     repository_id: repo_ids.join(','),
-                    stats_type: self.type,
+                    stats_type: 1,
                     kerbroes_id: kerbroes_ids.join(','),
                     start_date: self.beginTime,
                     end_date: self.endTime
@@ -318,7 +318,7 @@ var reopData = new Vue({
             if (this.category == 'commits'){
                 get('/api/stats/commits', {
                     repository_id: self.repoTmp[0].id,
-                    stats_type: self.type,
+                    stats_type: 1,
                     kerbroes_id: kerbroes_ids.join(','),
                     start_date: self.beginTime,
                     end_date: self.endTime
@@ -360,12 +360,14 @@ var reopData = new Vue({
                 return;
             }
             var kerbroes_ids = [];
+            var team_codes = [];
                 self.teamTmp.forEach(function(el) {
-                    kerbroes_ids.push(el.members)
+                    kerbroes_ids.push(el.members);
+                    team_codes.push(el.team_code);
                 });
             get('/api/stats/bugs/', {
-                stats_type: self.type,
-                team_code: self.selectedTeam,
+                stats_type: 1,
+                team_code: team_codes.join(','),
                 kerbroes_id: kerbroes_ids.join(','),
                 start_date: self.beginTime,
                 end_date: self.endTime
@@ -393,7 +395,7 @@ var reopData = new Vue({
                     kerbroes_ids.push(el.kerbroes_id)
                 });
             get('/api/stats/bugs/', {
-                stats_type: self.type,
+                stats_type: 1,
                 team_code: self.selectedTeam,
                 kerbroes_id: kerbroes_ids.join(','),
                 start_date: self.beginTime,
@@ -448,7 +450,7 @@ var reopData = new Vue({
             var self = this;
             // console.log(self.repoTmp[0].repo);
             // console.log(self.teamTmp);
-            self.type = 1;
+            self.type = 2;
             if (self.isProduct == true)
             {
                 $('#productTeamModal').modal('show')
@@ -536,6 +538,55 @@ var reopData = new Vue({
         },
         setProduct: function(){
             this.isProduct = false;
+        },
+        exportExcel: function(){
+            var self = this;
+            export_type = self.type;
+            var filename = 'ProductStatisticReport'
+            if (self.hasRes == false) {
+                export_type = 3;
+                var d = new Date()
+                var end_time = formatTime(d, 'Y-M-D')
+                var year = d.getFullYear().toString()
+                var start_time = year + '-01-01'
+                filename += '_KVM_ALL';
+                filename += '_' + start_time + '_' + end_time
+            }
+            else {
+                if (export_type == 1) {
+                    self.memberTmp.forEach(function(el) {
+                        filename += '_' + el.kerbroes_id
+                    });
+                }
+                else {
+                    self.teamTmp.forEach(function(el) {
+                        filename += '_' + el.team_code;
+                    });
+                }
+                filename += '_' + self.beginTime + '_' + self.endTime
+            }
+            filename += '.xlsx'
+
+            var xhr = new XMLHttpRequest()
+            xhr.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    res = this.response
+                    console.log(res, typeof res)
+                    blob = new Blob([res]);
+                    blobUrl = window.URL.createObjectURL(blob);
+                    a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.href = blobUrl;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    document.body.removeChild(a);
+                }
+            }
+            xhr.open('GET', '/api/stats/export-excel/')
+            xhr.responseType = 'blob'
+            xhr.send()
         }
     },
     created: function() {

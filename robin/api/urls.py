@@ -14,7 +14,8 @@ urlpatterns = [
     url(r'^stats/pending-patchs/$', views.pending_patchs),
     url(r'^stats/commits/$', views.commit_stats),
     url(r'^stats/comments/$', views.comment_stats),
-    url(r'^stats/bugs/$', views.bug_status_team)
+    url(r'^stats/bugs/$', views.bug_status_team),
+    url(r'^stats/export-excel/$', views.export_excel)
     # url(r'^stats/test/$', views.weather_chart_view),
 
 ]

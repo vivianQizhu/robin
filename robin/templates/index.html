@@ -180,6 +180,15 @@
                         <td><a href="${item.high_reported_url_rhel9}">${item.high_reported_rhel9}</a></td>
                         <td><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
                     </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td><button class="btn btn-primary" v-on:click="exportExcel()">Export</button></td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -464,6 +473,7 @@
         <h3 style="float:left">Product Data</h3>
         <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
         <hr style="width:100%">
+
         <table class="table table-striped" >
             <thead>
                 <tr>
@@ -523,6 +533,14 @@
                     <td>${item.high_ratio_rhel9}</td>
                     <td><a href="${item.high_reported_url_rhel9}">${item.high_reported_rhel9}</a></td>
                     <td><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td><button class="btn btn-primary" v-on:click="exportExcel()">Export</button></td>
                 </tr>
             </tbody>
         </table>

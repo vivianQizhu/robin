@@ -1,9 +1,12 @@
 import logging
 import urllib
+import xlsxwriter
 from datetime import datetime, date
 
+from io import BytesIO
 from commons.exceptions import APIError
 from django.db.models import F
+from django.http import HttpResponse
 from members.models import Team, Member
 from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
@@ -17,7 +20,8 @@ from .serializers import (RepositorySerializer,
                           BasesStatsSerializer,
                           CommentStatsSerializer,
                           MemberSerializer,
-                          BugStatsSerializer)
+                          BugStatsSerializer,
+                          BugExportSerializer)
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +236,7 @@ class BugListView(APIView):
             d = _bug_status(start_date, end_date, kerbroes_id_list)
             d.update({'team': team.team_name})
             details.append(d)
+        global PRODUCT_BUG_DATA
         PRODUCT_BUG_DATA = details
         response = _paginate_response(details, request)
         return response
@@ -560,22 +565,85 @@ def bug_status_team(request):
             logger.info('[bug_status] Received data is valid.')
             start_date = serializer.validated_data['start_date']
             end_date = serializer.validated_data['end_date']
+            team_code = serializer.validated_data.get('team_code', '')
+
             kerbroes_id_list = _stats_type_sortor(
                 serializer.validated_data['stats_type'],
-                serializer.validated_data.get('team_code', ''),
+                team_code,
                 serializer.validated_data.get('kerbroes_id', ''))
             det = _bug_status(start_date, end_date, kerbroes_id_list)
             if len(kerbroes_id_list) > 1:
-                name = 'ALL'
+                name = team_code
             else:
-                name = ''
+                name = kerbroes_id_list[0]
             det.update({'team': name})
             details.append(det)
+            global PRODUCT_BUG_DATA
+            PRODUCT_BUG_DATA = details
             response = _paginate_response(details, request)
             return response
         raise APIError(APIError.INVALID_REQUEST_DATA, detail=serializer.errors)
     raise APIError(APIError.INVALID_REQUEST_METHOD,
                    detail='Does Not Support Post Method')
+
+
+@api_view(['GET'])
+def export_excel(request):
+    logger.info('[export excel]' % request.query_params)
+    if request.method == 'GET':
+        output = BytesIO()
+        ws = xlsxwriter.Workbook(output)
+        w = ws.add_worksheet()
+        style = ws.add_format({'bold': True})
+
+        w.write(0, 0, u'Team Name/Member Name', style)
+        w.write(0, 1, u'Catch BZs Ratio', style)
+        w.write(0, 2, u'Reported', style)
+        w.write(0, 3, u'QA Contact', style)
+        w.write(0, 4, u'High&Above Catch Ratio', style)
+        w.write(0, 5, u'High&Above Reported', style)
+        w.write(0, 6, u'High&Above QA Contact', style)
+
+        global PRODUCT_BUG_DATA
+        len_list = len(PRODUCT_BUG_DATA)
+        w.write(1, 0, u'Summary', style)
+        w.write(2 + len_list, 0, u'RHEL 8', style)
+        w.write(3 + len_list * 2, 0, u'RHEL 9', style)
+
+        for i, detail in enumerate(PRODUCT_BUG_DATA):
+            col_sum = i + 2
+            col_next = col_sum
+            for product in ('all', 'rhel8', 'rhel9'):
+                reported = str(detail['total_reported_%s' % product])
+                reported_url = str(detail['total_reported_url_%s' % product])
+                qa_contact = str(detail['total_qa_contact_%s' % product])
+                qa_contact_url = str(detail['total_qa_contact_url_%s' % product])
+                reported_h = str(detail['high_reported_%s' % product])
+                reported_url_h = str(detail['high_reported_url_%s' % product])
+                qa_contact_h = str(detail['high_qa_contact_%s' % product])
+                qa_contact_url_h = str(detail['high_qa_contact_url_%s' % product])
+                w.write(col_next, 0, detail['team'])
+                w.write(col_next, 1,
+                        detail['total_valid_bz_ratio_%s' % product])
+                w.write_url(col_next, 2, reported_url, string=reported)
+                w.write_url(col_next, 3, qa_contact_url, string=qa_contact)
+                w.write(col_next, 4, detail['high_ratio_%s' % product])
+                w.write_url(col_next, 5, reported_url_h, string=reported_h)
+                w.write_url(col_next, 6, qa_contact_url_h, string=qa_contact_h)
+                col_next = col_next + len_list + 1
+
+        ws.close()
+        output.seek(0)
+        response = HttpResponse(output.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response[
+            'Content-Disposition'] = 'attachment;filename={0}'.format(
+            'ProductStatisticReport.xlsx')
+        output.close()
+        return response
+        # raise APIError(APIError.INVALID_REQUEST_DATA, detail=serializer.errors)
+    raise APIError(APIError.INVALID_REQUEST_METHOD,
+                   detail='Does Not Support Post Method')
+
 
 # from django.shortcuts import render
 # from chartit import DataPool, Chart
