@@ -89,15 +89,3 @@ class BugStatsSerializer(serializers.Serializer):
     class Meta:
         fields = ('stats_type', 'team_code', 'kerbroes_id',
                   'query_start_date', 'query_end_date')
-
-
-class BugExportSerializer(serializers.Serializer):
-    export_type = serializers.ChoiceField(choices=EXPORT_TYPE, required=True)
-    team_code = serializers.CharField(required=False)
-    kerbroes_id = serializers.CharField(required=False)
-    start_date = serializers.DateField(required=True)
-    end_date = serializers.DateField(required=True)
-
-    class Meta:
-        fields = ('export_type', 'team_code', 'kerbroes_id',
-                  'query_start_date', 'query_end_date')

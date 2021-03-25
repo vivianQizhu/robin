@@ -20,8 +20,7 @@ from .serializers import (RepositorySerializer,
                           BasesStatsSerializer,
                           CommentStatsSerializer,
                           MemberSerializer,
-                          BugStatsSerializer,
-                          BugExportSerializer)
+                          BugStatsSerializer)
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +61,7 @@ def _get_merged_by_kerbroes_id(github_account):
     return merged_by
 
 
-def _bug_status(start_date, end_date, kerbroes_id_list):
+def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False):
     details = {}
     cgi_base_url = ('https://bugzilla.redhat.com/buglist.cgi?columnlist=product'
                     '%2Ccomponent%2Cassigned_to%2Cbug_status%2Cresolution'
@@ -72,11 +71,15 @@ def _bug_status(start_date, end_date, kerbroes_id_list):
     robin_list_id = 'ROBIN_LIST_ID'
     robin_role = 'ROBIN_ROLE'
     valid_bz_url = ('&classification=Red%%20Hat&list_id=%s&query_format=advanced'
-                    '&f1=keywords&f2=%s&f3=cf_zstream_target_release'
-                    '&o1=nowordssubstr&o2=anywordssubstr&o3=isempty' %
+                    '&f1=keywords&f2=%s&f3=cf_zstream_target_release' %
                     (robin_list_id, robin_role))
+    if exclude_acceptance:
+        valid_bz_url += '&f4=cf_qa_whiteboard'
+    valid_bz_url += '&o1=nowordssubstr&o2=anywordssubstr&o3=isempty'
+    if exclude_acceptance:
+        valid_bz_url += '&o4=notsubstring'
     valid_bz_url += ('&chfield=%%5BBug%%20creation%%5D&chfieldfrom=%s&chfieldto=%s'
-                     % (start_date, end_date))
+                     % (str(start_date)[:10], str(end_date)[:10]))
 
     fields = {
         'bug_status': ['NEW', 'ASSIGNED', 'POST', 'MODIFIED', 'ON_QA', 'VERIFIED', 'CLOSED'],
@@ -93,6 +96,8 @@ def _bug_status(start_date, end_date, kerbroes_id_list):
                      "TestOnly", "Improvement", "FutureFeature", "Rebase",
                      "FeatureBackport", "Documentation", "OtherQA", "RFE"],
                'v2': kerbroes_id_list}
+    if exclude_acceptance:
+        filters.update({'v4': ['acceptance']})
     product = {'rhel8': ["Red Hat Enterprise Linux 8",
                          "Red Hat Enterprise Linux Advanced Virtualization"],
                'rhel9': ["Red Hat Enterprise Linux 9"]}
@@ -112,7 +117,9 @@ def _bug_status(start_date, end_date, kerbroes_id_list):
     product_names = product.keys()
     product_names.append('all')
 
+    log_file = open('/tmp/robin.log', mode='a+')
     def get_num_and_link(list_id, bz_filter='reporter', high=False):
+
         product_num = dict.fromkeys(product_names, 0)
         url_list = {}
         url_r = cgi_base_url + valid_bz_url.replace(
@@ -133,15 +140,21 @@ def _bug_status(start_date, end_date, kerbroes_id_list):
                         filter_dict.update({'priority': 'high'})
                     bugs = ProductBug.objects.filter(**filter_dict).filter(
                         created_at__range=(start_date, end_date))
+                    if exclude_acceptance:
+                        bugs = bugs.exclude(qa_whiteboard__contains='acceptance')
                     if high:
                         filter_dict.update({'priority': 'urgent'})
-                        bugs = bugs | ProductBug.objects.filter(**filter_dict).filter(
+                        u_bugs = ProductBug.objects.filter(**filter_dict).filter(
                             created_at__range=(start_date, end_date))
+                        if exclude_acceptance:
+                            u_bugs = u_bugs.exclude(qa_whiteboard__contains='acceptance')
+                        bugs = bugs | u_bugs
                     if bz_filter == 'reporter':
                         new_count = 0
                         for bug in bugs:
-                            if bug.qa_contact in kerbroes_id_list:
+                            if (bug.qa_contact in kerbroes_id_list) or (bug.qa_contact == 'virt-bugs'):
                                 new_count += 1
+                                log_file.write('%s\n' % bug.bug_id)
                     else:
                         new_count = bugs.count()
                     product_num.update({key: new_count + product_num[key]})
@@ -149,8 +162,10 @@ def _bug_status(start_date, end_date, kerbroes_id_list):
             url_list.update({key: url_r_tmp})
         url_list.update({'all': url_r + product_filter_str})
 
+        log_file.write('NUM: %s' % str(product_num))
         return product_num, url_list
 
+    log_file.write('reported: \n')
     bz_reported_nums, bz_reported_urls = get_num_and_link('11627322', 'reporter')
     bz_qa_contact_nums, bz_qa_contact_urls = get_num_and_link(
         '11627320', 'qa_contact')
@@ -158,6 +173,7 @@ def _bug_status(start_date, end_date, kerbroes_id_list):
         '11627322', 'reporter', True)
     bz_qa_contact_nums_high, bz_qa_contact_urls_high = get_num_and_link(
         '11627320', 'qa_contact', True)
+    log_file.close()
 
     def ratio(num, den):
         valid_bz_ratio = 0
@@ -220,8 +236,9 @@ class BugListView(APIView):
     def get(self, request, format=None):
         logger.info('[bug_status] Received data is valid.')
         details = []
-        end_date = date.today()
-        start_date = date(end_date.year, 1, 1)
+        end_date = datetime.today()
+        year = date.today().year
+        start_date = datetime(year, 1, 1, 0, 0, 0)
         # Whole team data
         members = Member.objects.all()
         kerbroes_id_list = [member.kerbroes_id for member in members]
@@ -233,7 +250,7 @@ class BugListView(APIView):
         for team in teams:
             members = Member.objects.filter(team=team)
             kerbroes_id_list = [member.kerbroes_id for member in members]
-            d = _bug_status(start_date, end_date, kerbroes_id_list)
+            d = _bug_status(start_date, end_date, kerbroes_id_list, True)
             d.update({'team': team.team_name})
             details.append(d)
         global PRODUCT_BUG_DATA
@@ -545,9 +562,9 @@ def comment_stats(request):
             # group comments of same pull together
             values = set(map(lambda x:x['patch_url'], details))
             details_group = [[y for y in details if y['patch_url'] == x] for x in values]
-            new_details = [{ 'patch_count':len(details_group),
-                             'review_count':len(details),
-                             'data':details_group}] 
+            new_details = [{'patch_count': len(details_group),
+                            'review_count': len(details),
+                            'data': details_group}]
 
             response = _paginate_response(new_details, request)
             return response
@@ -571,7 +588,7 @@ def bug_status_team(request):
                 serializer.validated_data['stats_type'],
                 team_code,
                 serializer.validated_data.get('kerbroes_id', ''))
-            det = _bug_status(start_date, end_date, kerbroes_id_list)
+            det = _bug_status(start_date, end_date, kerbroes_id_list, True)
             if len(kerbroes_id_list) > 1:
                 name = team_code
             else:

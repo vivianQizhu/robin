@@ -273,8 +273,9 @@ def auto_update_product_bug():
     start_date = date(end_date.year-1, 1, 1)
     members = Member.objects.filter(serving=True)
     kerbroes_id_list = [member.kerbroes_id for member in members]
-    rest_base_url = ('https://bugzilla.redhat.com/rest/bug?include_fields=id%2Cproduct'
-                    '%2Ccomponent%2Cqa_contact%2Ccreator%2Cpriority%2Ccreation_time')
+    rest_base_url = ('https://bugzilla.redhat.com/rest/bug?include_fields=id'
+                     '%2Cproduct%2Ccomponent%2Cqa_contact%2Ccreator%2Cpriority'
+                     '%2Ccreation_time%2Ccf_qa_whiteboard')
     robin_list_id = 'ROBIN_LIST_ID'
     robin_role = 'ROBIN_ROLE'
     valid_bz_url = ('&classification=Red%%20Hat&list_id=%s&query_format=advanced'
@@ -339,12 +340,15 @@ def auto_update_product_bug():
         '[CRON] auto_update_product_bug loading bugs into db')
     for bug in bug_list:
         qa_contact = bug['qa_contact'].split('@')[0]
+        qa_whiteboard = bug['cf_qa_whiteboard']
+        qa_whiteboard = 'acceptance' if 'acceptance' in qa_whiteboard else ''
         ProductBug.objects.create(bug_id=bug['id'],
                                   reporter=bug['creator'].split('@')[0],
                                   qa_contact=qa_contact,
                                   bug_product=bug['product'],
                                   component=bug['component'],
                                   priority=bug['priority'],
+                                  qa_whiteboard=qa_whiteboard,
                                   created_at=str(utc2local_parser(bug['creation_time']))[:-6])
 
 # =================================
