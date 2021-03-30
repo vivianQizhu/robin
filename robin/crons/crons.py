@@ -275,7 +275,7 @@ def auto_update_product_bug():
     kerbroes_id_list = [member.kerbroes_id for member in members]
     rest_base_url = ('https://bugzilla.redhat.com/rest/bug?include_fields=id'
                      '%2Cproduct%2Ccomponent%2Cqa_contact%2Ccreator%2Cpriority'
-                     '%2Ccreation_time%2Ccf_qa_whiteboard')
+                     '%2Ccreation_time%2Ccf_qa_whiteboard%2Cseverity')
     robin_list_id = 'ROBIN_LIST_ID'
     robin_role = 'ROBIN_ROLE'
     valid_bz_url = ('&classification=Red%%20Hat&list_id=%s&query_format=advanced'
@@ -338,10 +338,16 @@ def auto_update_product_bug():
     ProductBug.objects.all().delete()
     logger.info(
         '[CRON] auto_update_product_bug loading bugs into db')
+
     for bug in bug_list:
         qa_contact = bug['qa_contact'].split('@')[0]
         qa_whiteboard = bug['cf_qa_whiteboard']
         qa_whiteboard = 'acceptance' if 'acceptance' in qa_whiteboard else ''
+        high_keywords = ['high', 'urgent']
+        if (bug['severity'] in high_keywords and
+                bug['priority'] not in high_keywords):
+            bug['priority'] = bug['severity']
+
         ProductBug.objects.create(bug_id=bug['id'],
                                   reporter=bug['creator'].split('@')[0],
                                   qa_contact=qa_contact,

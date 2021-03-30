@@ -125,7 +125,7 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
         url_r = cgi_base_url + valid_bz_url.replace(
             robin_list_id, list_id).replace(robin_role, bz_filter)
         if high:
-            url_r += '&priority=urgent&priority=high'
+            url_r += '&priority=urgent&priority=high&severity=urgent&severity=high'
         product_filter_str = ''
         for key, value in product.items():
             url_r_tmp = url_r
