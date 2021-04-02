@@ -1,7 +1,7 @@
 import logging
 import urllib
 import xlsxwriter
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 from io import BytesIO
 from commons.exceptions import APIError
@@ -63,6 +63,7 @@ def _get_merged_by_kerbroes_id(github_account):
 
 def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False):
     details = {}
+    end_date = end_date + timedelta(days=1)
     cgi_base_url = ('https://bugzilla.redhat.com/buglist.cgi?columnlist=product'
                     '%2Ccomponent%2Cassigned_to%2Cbug_status%2Cresolution'
                     '%2Cshort_desc%2Cflagtypes.name%2Cqa_contact%2Creporter'
@@ -75,7 +76,11 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
                     (robin_list_id, robin_role))
     if exclude_acceptance:
         valid_bz_url += '&f4=cf_qa_whiteboard'
+    high_above_f = '&f5=OP&f6=priority&f7=bug_severity&j5=OR'
+    valid_bz_url += high_above_f
     valid_bz_url += '&o1=nowordssubstr&o2=anywordssubstr&o3=isempty'
+    high_above_o = '&o6=anywordssubstr&o7=anywordssubstr'
+    valid_bz_url += high_above_o
     if exclude_acceptance:
         valid_bz_url += '&o4=notsubstring'
     valid_bz_url += ('&chfield=%%5BBug%%20creation%%5D&chfieldfrom=%s&chfieldto=%s'
@@ -112,6 +117,8 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
         for op in value[:-1]:
             valid_bz_url += urllib.quote('%s,' % op)
         valid_bz_url += urllib.quote(value[-1])
+    high_above_v = '&v6=urgent%2Chigh&v7=urgent%2Chigh'
+    valid_bz_url += high_above_v
 
     valid_bz_url += '&api_key=mLPREvS9ArB97djTLlZBmRKeqkp8jDYrCeLX4U58'
     product_names = product.keys()
@@ -124,8 +131,9 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
         url_list = {}
         url_r = cgi_base_url + valid_bz_url.replace(
             robin_list_id, list_id).replace(robin_role, bz_filter)
-        if high:
-            url_r += '&priority=urgent&priority=high&severity=urgent&severity=high'
+        if not high:
+            url_r = url_r.replace(high_above_f, '').replace(
+                high_above_o, '').replace(high_above_v, '')
         product_filter_str = ''
         for key, value in product.items():
             url_r_tmp = url_r
