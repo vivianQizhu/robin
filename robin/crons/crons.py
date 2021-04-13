@@ -275,7 +275,7 @@ def auto_update_product_bug():
     kerbroes_id_list = [member.kerbroes_id for member in members]
     rest_base_url = ('https://bugzilla.redhat.com/rest/bug?include_fields=id'
                      '%2Cproduct%2Ccomponent%2Cqa_contact%2Ccreator%2Cpriority'
-                     '%2Ccreation_time%2Ccf_qa_whiteboard%2Cseverity')
+                     '%2Ccreation_time%2Ccf_qa_whiteboard%2Cseverity%2Cstatus%2Cresolution')
     robin_list_id = 'ROBIN_LIST_ID'
     robin_role = 'ROBIN_ROLE'
     valid_bz_url = ('&classification=Red%%20Hat&list_id=%s&query_format=advanced'
@@ -287,16 +287,14 @@ def auto_update_product_bug():
 
     fields = {
         'bug_status': ['NEW', 'ASSIGNED', 'POST', 'MODIFIED', 'ON_QA', 'VERIFIED', 'CLOSED'],
-        'rep_platform': ["Unspecified", "All", "x86_64", "ppc64", "ppc64le",
-                         "s390", "s390x", "aarch64", "arm"],
+        'rep_platform': ["Unspecified", "All", "x86_64", "ppc64", "ppc64le"],
         'product': ["Red Hat Enterprise Linux 8",
                     "Red Hat Enterprise Linux 9",
                     "Red Hat Enterprise Linux Advanced Virtualization"],
         'component': ['qemu-kvm', 'kernel', 'virtio-win', 'seabios', 'edk2',
                       'slof', 'qemu-guest-agent', 'dtc', 'kernel-rt', 'ovmf',
                       'libtpms', 'virglrenderer', 'qemu-kvm-rhev', 'kernel-rt',
-                      'qemu-guest-agent', 'qemu-kvm-ma','kernel-alt'],
-        'resolution': ["---", "CURRENTRELEASE", "ERRATA"]}
+                      'qemu-guest-agent', 'qemu-kvm-ma','kernel-alt']}
 
     filters = {'v1': ["ABIAssurance", "TechPreview", "ReleaseNotes", "Tracking",
                      "Task", "HardwareEnablement", "SecurityTracking",
@@ -344,9 +342,21 @@ def auto_update_product_bug():
         qa_whiteboard = bug['cf_qa_whiteboard']
         qa_whiteboard = 'acceptance' if 'acceptance' in qa_whiteboard else ''
         high_keywords = ['high', 'urgent']
+        if bug['product'] == 'Red Hat Enterprise Linux Advanced Virtualization':
+            bug['product'] = 'Red Hat Enterprise Linux 8'
         if (bug['severity'] in high_keywords and
                 bug['priority'] not in high_keywords):
             bug['priority'] = bug['severity']
+
+        if bug['resolution'] in ["NOTABUG", "DUPLICATE", "INSUFFICIENT_DATA",
+                                 "CANTFIX", "NEXTRELEASE", "WORKSFORME",
+                                 "WONTFIX"]:
+            bug['resolution'] = "INVALID"
+        else:
+            if (bug['resolution'] in ['CURRENTRELEASE', 'ERRATA'] or
+                bug['status'] in ['MODIFIED', 'VERIFIED']):
+                bug['status'] = 'FIXED'
+            bug['resolution'] = 'VALID'
 
         ProductBug.objects.create(bug_id=bug['id'],
                                   reporter=bug['creator'].split('@')[0],
@@ -355,7 +365,9 @@ def auto_update_product_bug():
                                   component=bug['component'],
                                   priority=bug['priority'],
                                   qa_whiteboard=qa_whiteboard,
-                                  created_at=str(utc2local_parser(bug['creation_time']))[:-6])
+                                  created_at=str(utc2local_parser(bug['creation_time']))[:-6],
+                                  status=bug['status'],
+                                  resolution=bug['resolution'])
 
 # =================================
 # auto_load_commits_of_members()

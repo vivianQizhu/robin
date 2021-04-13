@@ -118,11 +118,15 @@
                     <tr>
                         <th>Team Name</th>
                         <th>Catch BZs Ratio</th>
-                        <th>Reported</th>
+                        <th>Reported Valid</th>
                         <th>QA Contact</th>
                         <th>High&Above Catch Ratio</th>
-                        <th>Reported</th>
-                        <th>QA Contact</th>
+                        <th>High&Above Reported Valid</th>
+                        <th style="border-right:#cccccc solid 1px;">High&Above QA Contact</th>
+                        <th>Fixed Ratio</th>
+                        <th>Fixed</th>
+                        <th>Invalid Ratio</th>
+                        <th>Reported Invalid</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -134,15 +138,23 @@
                         <td></td>
                         <td></td>
                         <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr v-for="item in productAll.results">
                         <td>${item.team}</td>
-                        <td>${item.total_valid_bz_ratio_all}</td>
-                        <td><a href="${item.total_reported_url_all}">${item.total_reported_all}</a></td>
-                        <td><a href="${item.total_qa_contact_url_all}">${item.total_qa_contact_all}</a></td>
-                        <td>${item.high_ratio_all}</td>
+                        <td>${item.total_catch_bz_ratio_all}</td>
+                        <td><a href="${item.valid_reported_url_all}">${item.valid_reported_all}</a></td>
+                        <td><a href="${item.qa_contact_url_all}">${item.qa_contact_all}</a></td>
+                        <td>${item.high_catch_ratio_all}</td>
                         <td><a href="${item.high_reported_url_all}">${item.high_reported_all}</a></td>
-                        <td><a href="${item.high_qa_contact_url_all}">${item.high_qa_contact_all}</a></td>
+                        <td style="border-right:#cccccc solid 1px;"><a href="${item.high_qa_contact_url_all}">${item.high_qa_contact_all}</a></td>
+                        <td>${item.fixed_ratio_all}</td>
+                        <td><a href="${item.fixed_url_all}">${item.fixed_num_all}</a></td>
+                        <td>${item.invalid_ratio_all}</td>
+                        <td><a href="${item.invalid_url_all}">${item.invalid_num_all}</a></td>
                     </tr>
                     <tr>
                         <td style="text-align:left;font-weight:bold">RHEL 8</td>
@@ -152,15 +164,23 @@
                         <td></td>
                         <td></td>
                         <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr v-for="item in productAll.results">
                         <td>${item.team}</td>
-                        <td>${item.total_valid_bz_ratio_rhel8}</td>
-                        <td><a href="${item.total_reported_url_rhel8}">${item.total_reported_rhel8}</a></td>
-                        <td><a href="${item.total_qa_contact_url_rhel8}">${item.total_qa_contact_rhel8}</a></td>
-                        <td>${item.high_ratio_rhel8}</td>
+                        <td>${item.total_catch_bz_ratio_rhel8}</td>
+                        <td><a href="${item.valid_reported_url_rhel8}">${item.valid_reported_rhel8}</a></td>
+                        <td><a href="${item.qa_contact_url_rhel8}">${item.qa_contact_rhel8}</a></td>
+                        <td>${item.high_catch_ratio_rhel8}</td>
                         <td><a href="${item.high_reported_url_rhel8}">${item.high_reported_rhel8}</a></td>
-                        <td><a href="${item.high_qa_contact_url_rhel8}">${item.high_qa_contact_rhel8}</a></td>
+                        <td style="border-right:#cccccc solid 1px;"><a href="${item.high_qa_contact_url_rhel8}">${item.high_qa_contact_rhel8}</a></td>
+                        <td>${item.fixed_ratio_rhel8}</td>
+                        <td><a href="${item.fixed_url_rhel8}">${item.fixed_num_rhel8}</a></td>
+                        <td>${item.invalid_ratio_rhel8}</td>
+                        <td><a href="${item.invalid_url_rhel8}">${item.invalid_num_rhel8}</a></td>
                     </tr>
                     <tr>
                         <td style="text-align:left;font-weight:bold">RHEL 9</td>
@@ -170,17 +190,29 @@
                         <td></td>
                         <td></td>
                         <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr v-for="item in productAll.results">
                         <td>${item.team}</td>
-                        <td>${item.total_valid_bz_ratio_rhel9}</td>
-                        <td><a href="${item.total_reported_url_rhel9}">${item.total_reported_rhel9}</a></td>
-                        <td><a href="${item.total_qa_contact_url_rhel9}">${item.total_qa_contact_rhel9}</a></td>
-                        <td>${item.high_ratio_rhel9}</td>
+                        <td>${item.total_catch_bz_ratio_rhel9}</td>
+                        <td><a href="${item.valid_reported_url_rhel9}">${item.valid_reported_rhel9}</a></td>
+                        <td><a href="${item.qa_contact_url_rhel9}">${item.qa_contact_rhel9}</a></td>
+                        <td>${item.high_catch_ratio_rhel9}</td>
                         <td><a href="${item.high_reported_url_rhel9}">${item.high_reported_rhel9}</a></td>
-                        <td><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
+                        <td style="border-right:#cccccc solid 1px;"><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
+                        <td>${item.fixed_ratio_rhel9}</td>
+                        <td><a href="${item.fixed_url_rhel9}">${item.fixed_num_rhel9}</a></td>
+                        <td>${item.invalid_ratio_rhel9}</td>
+                        <td><a href="${item.invalid_url_rhel9}">${item.invalid_num_rhel9}</a></td>
                     </tr>
                     <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                         <td></td>
                         <td></td>
                         <td></td>
@@ -477,12 +509,16 @@
         <table class="table table-striped" >
             <thead>
                 <tr>
-                    <th>Catch BZs Ratio</th>
-                    <th>Reported</th>
-                    <th>QA Contact</th>
-                    <th>High&Above Catch Ratio</th>
-                    <th>Reported</th>
-                    <th>QA Contact</th>
+                     <th>Catch BZs Ratio</th>
+                     <th>Reported Valid</th>
+                     <th>QA Contact</th>
+                     <th>High&Above Catch Ratio</th>
+                     <th>High&Above Reported Valid</th>
+                     <th>High&Above QA Contact</th>
+                     <th style="border-right:#cccccc solid 1px;">Fixed Ratio</th>
+                     <th>Fixed Bz</th>
+                     <th>Invalid Ratio</th>
+                     <th>Reported Invalid</th>
                 </tr>
             </thead>
             <tbody>
@@ -493,14 +529,22 @@
                     <td></td>
                     <td></td>
                     <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                 </tr>
                 <tr v-for="item in resData.results">
-                    <td>${item.total_valid_bz_ratio_all}</td>
-                    <td><a href="${item.total_reported_url_all}">${item.total_reported_all}</a></td>
-                    <td><a href="${item.total_qa_contact_url_all}">${item.total_qa_contact_all}</a></td>
-                    <td>${item.high_ratio_all}</td>
+                    <td>${item.total_catch_bz_ratio_all}</td>
+                    <td><a href="${item.valid_reported_url_all}">${item.valid_reported_all}</a></td>
+                    <td><a href="${item.qa_contact_url_all}">${item.qa_contact_all}</a></td>
+                    <td>${item.high_catch_ratio_all}</td>
                     <td><a href="${item.high_reported_url_all}">${item.high_reported_all}</a></td>
                     <td><a href="${item.high_qa_contact_url_all}">${item.high_qa_contact_all}</a></td>
+                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_all}</td>
+                    <td><a href="${item.fixed_url_all}">${item.fixed_num_all}</a></td>
+                    <td>${item.invalid_ratio_all}</td>
+                    <td><a href="${item.invalid_url_all}">${item.invalid_num_all}</a></td>
                 </tr>
                 <tr>
                     <td style="text-align:left;font-weight:bold">RHEL 8</td>
@@ -509,14 +553,22 @@
                     <td></td>
                     <td></td>
                     <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                 </tr>
                 <tr v-for="item in resData.results">
-                    <td>${item.total_valid_bz_ratio_rhel8}</td>
-                    <td><a href="${item.total_reported_url_rhel8}">${item.total_reported_rhel8}</a></td>
-                    <td><a href="${item.total_qa_contact_url_rhel8}">${item.total_qa_contact_rhel8}</a></td>
-                    <td>${item.high_ratio_rhel8}</td>
+                    <td>${item.total_catch_bz_ratio_rhel8}</td>
+                    <td><a href="${item.valid_reported_url_rhel8}">${item.valid_reported_rhel8}</a></td>
+                    <td><a href="${item.qa_contact_url_rhel8}">${item.qa_contact_rhel8}</a></td>
+                    <td>${item.high_catch_ratio_rhel8}</td>
                     <td><a href="${item.high_reported_url_rhel8}">${item.high_reported_rhel8}</a></td>
                     <td><a href="${item.high_qa_contact_url_rhel8}">${item.high_qa_contact_rhel8}</a></td>
+                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_rhel8}</td>
+                    <td><a href="${item.fixed_url_rhel8}">${item.fixed_num_rhel8}</a></td>
+                    <td>${item.invalid_ratio_rhel8}</td>
+                    <td><a href="${item.invalid_url_rhel8}">${item.invalid_num_rhel8}</a></td>
                 </tr>
                 <tr>
                     <td style="text-align:left;font-weight:bold">RHEL 9</td>
@@ -525,16 +577,28 @@
                     <td></td>
                     <td></td>
                     <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                 </tr>
                 <tr v-for="item in resData.results">
-                    <td>${item.total_valid_bz_ratio_rhel9}</td>
-                    <td><a href="${item.total_reported_url_rhel9}">${item.total_reported_rhel9}</a></td>
-                    <td><a href="${item.total_qa_contact_url_rhel9}">${item.total_qa_contact_rhel9}</a></td>
-                    <td>${item.high_ratio_rhel9}</td>
+                    <td>${item.total_catch_bz_ratio_rhel9}</td>
+                    <td><a href="${item.valid_reported_url_rhel9}">${item.valid_reported_rhel9}</a></td>
+                    <td><a href="${item.qa_contact_url_rhel9}">${item.qa_contact_rhel9}</a></td>
+                    <td>${item.high_catch_ratio_rhel9}</td>
                     <td><a href="${item.high_reported_url_rhel9}">${item.high_reported_rhel9}</a></td>
                     <td><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
+                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_rhel9}</td>
+                    <td><a href="${item.fixed_url_rhel9}">${item.fixed_num_rhel9}</a></td>
+                    <td>${item.invalid_ratio_rhel9}</td>
+                    <td><a href="${item.invalid_url_rhel9}">${item.invalid_num_rhel9}</a></td>
                 </tr>
                 <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
