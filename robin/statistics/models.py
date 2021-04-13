@@ -164,6 +164,8 @@ class ProductBug(models.Model):
     priority = models.CharField(max_length=32, verbose_name='bug priority')
     qa_whiteboard = models.CharField(max_length=100, verbose_name='bug qa whiteboard')
     created_at = models.DateTimeField(verbose_name='bug created date')
+    status = models.CharField(max_length=10, verbose_name='bug status')
+    resolution = models.CharField(max_length=32, verbose_name='bug resolution')
 
     objects = ProductBugManager()
 

@@ -26,6 +26,12 @@ logger = logging.getLogger(__name__)
 
 PRODUCT_BUG_DATA = []
 
+high_above_f = '&f5=OP&f6=priority&f7=bug_severity&j5=OR'
+high_above_o = '&o6=anywordssubstr&o7=anywordssubstr'
+high_above_v = '&v6=urgent%2Chigh&v7=urgent%2Chigh'
+robin_list_id = 'ROBIN_LIST_ID'
+robin_role = 'ROBIN_ROLE'
+
 
 def _paginate_response(data, request):
     paginator = PageNumberPagination()
@@ -61,25 +67,17 @@ def _get_merged_by_kerbroes_id(github_account):
     return merged_by
 
 
-def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False):
-    details = {}
-    end_date = end_date + timedelta(days=1)
-    cgi_base_url = ('https://bugzilla.redhat.com/buglist.cgi?columnlist=product'
-                    '%2Ccomponent%2Cassigned_to%2Cbug_status%2Cresolution'
-                    '%2Cshort_desc%2Cflagtypes.name%2Cqa_contact%2Creporter'
-                    '%2Ckeywords%2Cpriority%2Cbug_severity%2Ccf_qa_whiteboard'
-                    '%2Cversion')
-    robin_list_id = 'ROBIN_LIST_ID'
-    robin_role = 'ROBIN_ROLE'
+def _get_bz_url(start_date, end_date, kerbroes_id_list,
+                extra_field=None, exclude_acceptance=False):
+
     valid_bz_url = ('&classification=Red%%20Hat&list_id=%s&query_format=advanced'
                     '&f1=keywords&f2=%s&f3=cf_zstream_target_release' %
                     (robin_list_id, robin_role))
     if exclude_acceptance:
         valid_bz_url += '&f4=cf_qa_whiteboard'
-    high_above_f = '&f5=OP&f6=priority&f7=bug_severity&j5=OR'
     valid_bz_url += high_above_f
     valid_bz_url += '&o1=nowordssubstr&o2=anywordssubstr&o3=isempty'
-    high_above_o = '&o6=anywordssubstr&o7=anywordssubstr'
+
     valid_bz_url += high_above_o
     if exclude_acceptance:
         valid_bz_url += '&o4=notsubstring'
@@ -87,14 +85,13 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
                      % (str(start_date)[:10], str(end_date)[:10]))
 
     fields = {
-        'bug_status': ['NEW', 'ASSIGNED', 'POST', 'MODIFIED', 'ON_QA', 'VERIFIED', 'CLOSED'],
-        'rep_platform': ["Unspecified", "All", "x86_64", "ppc64", "ppc64le",
-                         "s390", "s390x", "aarch64", "arm"],
+        'rep_platform': ["Unspecified", "All", "x86_64", "ppc64", "ppc64le"],
         'component': ['qemu-kvm', 'kernel', 'virtio-win', 'seabios', 'edk2',
                       'slof', 'qemu-guest-agent', 'dtc', 'kernel-rt', 'ovmf',
                       'libtpms', 'virglrenderer', 'qemu-kvm-rhev', 'kernel-rt',
-                      'qemu-guest-agent', 'qemu-kvm-ma', 'kernel-alt'],
-        'resolution': ["---", "CURRENTRELEASE", "ERRATA"]}
+                      'qemu-guest-agent', 'qemu-kvm-ma', 'kernel-alt']}
+    if extra_field:
+        fields.update(extra_field)
 
     filters = {'v1': ["ABIAssurance", "TechPreview", "ReleaseNotes", "Tracking",
                      "Task", "HardwareEnablement", "SecurityTracking",
@@ -103,9 +100,6 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
                'v2': kerbroes_id_list}
     if exclude_acceptance:
         filters.update({'v4': ['acceptance']})
-    product = {'rhel8': ["Red Hat Enterprise Linux 8",
-                         "Red Hat Enterprise Linux Advanced Virtualization"],
-               'rhel9': ["Red Hat Enterprise Linux 9"]}
 
     for key, value in fields.items():
         for op in value:
@@ -117,19 +111,71 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
         for op in value[:-1]:
             valid_bz_url += urllib.quote('%s,' % op)
         valid_bz_url += urllib.quote(value[-1])
-    high_above_v = '&v6=urgent%2Chigh&v7=urgent%2Chigh'
-    valid_bz_url += high_above_v
 
+    valid_bz_url += high_above_v
     valid_bz_url += '&api_key=mLPREvS9ArB97djTLlZBmRKeqkp8jDYrCeLX4U58'
+    return valid_bz_url
+
+
+def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False):
+    details = {}
+    cgi_base_url = (
+        'https://bugzilla.redhat.com/buglist.cgi?columnlist=product'
+        '%2Ccomponent%2Cassigned_to%2Cbug_status%2Cresolution'
+        '%2Cshort_desc%2Cflagtypes.name%2Cqa_contact%2Creporter'
+        '%2Ckeywords%2Cpriority%2Cbug_severity%2Ccf_qa_whiteboard'
+        '%2Cversion')
+    end_date = end_date + timedelta(days=1)
+
+    product = {'rhel8': ["Red Hat Enterprise Linux 8",
+                         "Red Hat Enterprise Linux Advanced Virtualization"],
+               'rhel9': ["Red Hat Enterprise Linux 9"]}
     product_names = product.keys()
     product_names.append('all')
 
-    log_file = open('/tmp/robin.log', mode='a+')
-    def get_num_and_link(list_id, bz_filter='reporter', high=False):
+    bz_url_all = _get_bz_url(start_date, end_date, kerbroes_id_list,
+                             exclude_acceptance=exclude_acceptance)
 
+    def get_num_valid(list_id, bz_filter='reporter', high=False):
+        fields = {
+            'bug_status': ['NEW', 'ASSIGNED', 'POST', 'MODIFIED', 'ON_QA',
+                           'VERIFIED', 'CLOSED'],
+            'resolution': ["---", "CURRENTRELEASE", "ERRATA"]}
+        bz_url = _get_bz_url(start_date, end_date, kerbroes_id_list,
+                             extra_field=fields,
+                             exclude_acceptance=exclude_acceptance)
+        extra_filter = {'resolution': 'VALID'}
+        return get_num_and_link(list_id, bz_filter,
+                                bz_url, high, extra_filter=extra_filter)
+
+    def get_num_fixed(list_id, bz_filter='reporter', high=False):
+        fields = {
+            'bug_status': ['CLOSED', 'MODIFIED', 'VERIFIED'],
+            'resolution': ["---", "CURRENTRELEASE", "ERRATA"]}
+        bz_url = _get_bz_url(start_date, end_date, kerbroes_id_list,
+                             extra_field=fields,
+                             exclude_acceptance=exclude_acceptance)
+        extra_filter = {'status': 'FIXED'}
+        return get_num_and_link(list_id, bz_filter,
+                                bz_url, high, extra_filter=extra_filter)
+
+    def get_num_invalid(list_id, bz_filter='reporter', high=False):
+        fields = {
+            'bug_status': ['CLOSED'],
+            'resolution': ["NOTABUG", "DUPLICATE", "INSUFFICIENT_DATA",
+                           "CANTFIX", "NEXTRELEASE", "WORKSFORME","WONTFIX"]}
+        bz_url = _get_bz_url(start_date, end_date, kerbroes_id_list,
+                             extra_field=fields,
+                             exclude_acceptance=exclude_acceptance)
+        extra_filter = {'resolution': 'INVALID'}
+        return get_num_and_link(list_id, bz_filter,
+                                bz_url, high, extra_filter=extra_filter)
+
+    def get_num_and_link(list_id, bz_filter='reporter', url=bz_url_all,
+                         high=False, extra_filter=None):
         product_num = dict.fromkeys(product_names, 0)
         url_list = {}
-        url_r = cgi_base_url + valid_bz_url.replace(
+        url_r = cgi_base_url + url.replace(
             robin_list_id, list_id).replace(robin_role, bz_filter)
         if not high:
             url_r = url_r.replace(high_above_f, '').replace(
@@ -141,7 +187,11 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
                 product_filter_tmp = '&product=' + urllib.quote(p_name)
                 url_r_tmp += product_filter_tmp
                 product_filter_str += product_filter_tmp
+                if p_name == 'Red Hat Enterprise Linux Advanced Virtualization':
+                    continue
                 filter_dict = {'bug_product': p_name}
+                if extra_filter:
+                    filter_dict.update(extra_filter)
                 for kerbroes_id in kerbroes_id_list:
                     filter_dict.update({bz_filter: kerbroes_id})
                     if high:
@@ -162,26 +212,26 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
                         for bug in bugs:
                             if (bug.qa_contact in kerbroes_id_list) or (bug.qa_contact == 'virt-bugs'):
                                 new_count += 1
-                                log_file.write('%s\n' % bug.bug_id)
                     else:
+                        for bug in bugs:
                         new_count = bugs.count()
                     product_num.update({key: new_count + product_num[key]})
                     product_num.update({'all': product_num['all'] + new_count})
             url_list.update({key: url_r_tmp})
         url_list.update({'all': url_r + product_filter_str})
 
-        log_file.write('NUM: %s' % str(product_num))
         return product_num, url_list
 
-    log_file.write('reported: \n')
-    bz_reported_nums, bz_reported_urls = get_num_and_link('11627322', 'reporter')
-    bz_qa_contact_nums, bz_qa_contact_urls = get_num_and_link(
+    reported_valid, reported_urls_valid = get_num_valid('11627322', 'reporter')
+    qa_contact, qa_contact_urls = get_num_valid(
         '11627320', 'qa_contact')
-    bz_reported_nums_high, bz_reported_urls_high = get_num_and_link(
+    reported_high, reported_urls_high = get_num_valid(
         '11627322', 'reporter', True)
-    bz_qa_contact_nums_high, bz_qa_contact_urls_high = get_num_and_link(
+    qa_contact_high, qa_contact_urls_high = get_num_valid(
         '11627320', 'qa_contact', True)
-    log_file.close()
+
+    reported_invalid, reported_url_invalid = get_num_invalid('11627322', 'reporter')
+    reported_fixed, reported_url_fixed = get_num_fixed('11627322', 'reporter')
 
     def ratio(num, den):
         valid_bz_ratio = 0
@@ -190,23 +240,33 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
         return valid_bz_ratio
 
     for product_name in product_names:
-        reported_num = bz_reported_nums[product_name]
-        qa_contact_num = bz_qa_contact_nums[product_name]
-        total_valid_bz_ratio = ratio(reported_num, qa_contact_num)
-        reported_num_high = bz_reported_nums_high[product_name]
-        qa_contact_num_high = bz_qa_contact_nums_high[product_name]
-        high_ratio = ratio(reported_num_high, qa_contact_num_high)
+        valid_reported_num = reported_valid[product_name]
+        valid_qa_contact_num = qa_contact[product_name]
+        total_catch_bz_ratio = ratio(valid_reported_num, valid_qa_contact_num)
+        valid_reported_num_high = reported_high[product_name]
+        valid_qa_contact_num_high = qa_contact_high[product_name]
+        high_catch_ratio = ratio(valid_reported_num_high, valid_qa_contact_num_high)
+        invalid_num = reported_invalid[product_name]
+        fixed_num = reported_fixed[product_name]
+        invalid_ratio = ratio(invalid_num, invalid_num + valid_reported_num)
+        fixed_ratio = ratio(fixed_num, valid_reported_num)
         details.update(
-            {'total_valid_bz_ratio_%s' % (product_name): total_valid_bz_ratio,
-             'total_reported_%s' % (product_name): reported_num,
-             'total_reported_url_%s' % (product_name): bz_reported_urls[product_name],
-             'total_qa_contact_%s' % (product_name): qa_contact_num,
-             'total_qa_contact_url_%s' % (product_name): bz_qa_contact_urls[product_name],
-             'high_ratio_%s' % (product_name): high_ratio,
-             'high_reported_%s' % (product_name): reported_num_high,
-             'high_reported_url_%s' % (product_name): bz_reported_urls_high[product_name],
-             'high_qa_contact_%s' % (product_name): qa_contact_num_high,
-             'high_qa_contact_url_%s' % (product_name): bz_qa_contact_urls_high[product_name]
+            {'total_catch_bz_ratio_%s' % (product_name): total_catch_bz_ratio,
+             'valid_reported_%s' % (product_name): valid_reported_num,
+             'valid_reported_url_%s' % (product_name): reported_urls_valid[product_name],
+             'qa_contact_%s' % (product_name): valid_qa_contact_num,
+             'qa_contact_url_%s' % (product_name): qa_contact_urls[product_name],
+             'high_catch_ratio_%s' % (product_name): high_catch_ratio,
+             'high_reported_%s' % (product_name): valid_reported_num_high,
+             'high_reported_url_%s' % (product_name): reported_urls_high[product_name],
+             'high_qa_contact_%s' % (product_name): valid_qa_contact_num_high,
+             'high_qa_contact_url_%s' % (product_name): qa_contact_urls_high[product_name],
+             'fixed_num_%s' % (product_name): fixed_num,
+             'fixed_url_%s' % (product_name): reported_url_fixed[product_name],
+             'fixed_ratio_%s' % (product_name): fixed_ratio,
+             'invalid_num_%s' % (product_name): invalid_num,
+             'invalid_url_%s' % (product_name): reported_url_invalid[product_name],
+             'invalid_ratio_%s' % (product_name): invalid_ratio
              })
 
     return details
@@ -250,6 +310,7 @@ class BugListView(APIView):
         # Whole team data
         members = Member.objects.all()
         kerbroes_id_list = [member.kerbroes_id for member in members]
+        kerbroes_id_list.append('virt-bugs')
         d = _bug_status(start_date, end_date, kerbroes_id_list)
         d.update({'team': 'KVM_QE_ALL'})
         details.append(d)
@@ -258,7 +319,9 @@ class BugListView(APIView):
         for team in teams:
             members = Member.objects.filter(team=team)
             kerbroes_id_list = [member.kerbroes_id for member in members]
-            d = _bug_status(start_date, end_date, kerbroes_id_list, True)
+            # Exclude acceptance for sub teams besides multi-arch team(qzhang)
+            excl_acpt = False if team.team_code == 'qzhang' else True
+            d = _bug_status(start_date, end_date, kerbroes_id_list, excl_acpt)
             d.update({'team': team.team_name})
             details.append(d)
         global PRODUCT_BUG_DATA
@@ -591,12 +654,17 @@ def bug_status_team(request):
             start_date = serializer.validated_data['start_date']
             end_date = serializer.validated_data['end_date']
             team_code = serializer.validated_data.get('team_code', '')
-
             kerbroes_id_list = _stats_type_sortor(
                 serializer.validated_data['stats_type'],
                 team_code,
                 serializer.validated_data.get('kerbroes_id', ''))
-            det = _bug_status(start_date, end_date, kerbroes_id_list, True)
+            excl_accept = False if 'qzhang' in 'team_code' else True
+            team = Team.objects.filter(team_code='qzhang')
+            q_members = Member.objects.filter(team=team)
+            qzhang_members = [member.kerbroes_id for member in q_members]
+            if set(qzhang_members) & set(kerbroes_id_list):
+                excl_accept = False
+            det = _bug_status(start_date, end_date, kerbroes_id_list, excl_accept)
             if len(kerbroes_id_list) > 1:
                 name = team_code
             else:
@@ -628,6 +696,10 @@ def export_excel(request):
         w.write(0, 4, u'High&Above Catch Ratio', style)
         w.write(0, 5, u'High&Above Reported', style)
         w.write(0, 6, u'High&Above QA Contact', style)
+        w.write(0, 7, u'Fixed Ratio', style)
+        w.write(0, 8, u'Fixed Bz', style)
+        w.write(0, 9, u'Invalid Ratio', style)
+        w.write(0, 10, u'Reported Invalid', style)
 
         global PRODUCT_BUG_DATA
         len_list = len(PRODUCT_BUG_DATA)
@@ -639,22 +711,31 @@ def export_excel(request):
             col_sum = i + 2
             col_next = col_sum
             for product in ('all', 'rhel8', 'rhel9'):
-                reported = str(detail['total_reported_%s' % product])
-                reported_url = str(detail['total_reported_url_%s' % product])
-                qa_contact = str(detail['total_qa_contact_%s' % product])
-                qa_contact_url = str(detail['total_qa_contact_url_%s' % product])
+                valid_reported = str(detail['valid_reported_%s' % product])
+                valid_reported_url = str(detail['valid_reported_url_%s' % product])
+                qa_contact = str(detail['qa_contact_%s' % product])
+                qa_contact_url = str(detail['qa_contact_url_%s' % product])
                 reported_h = str(detail['high_reported_%s' % product])
                 reported_url_h = str(detail['high_reported_url_%s' % product])
                 qa_contact_h = str(detail['high_qa_contact_%s' % product])
                 qa_contact_url_h = str(detail['high_qa_contact_url_%s' % product])
+                fixed_num = str(detail['fixed_num_%s' % product])
+                fixed_url = str(detail['fixed_url_%s' % product])
+                invalid_num = str(detail['invalid_num_%s' % product])
+                invalid_url = str(detail['invalid_url_%s' % product])
+
                 w.write(col_next, 0, detail['team'])
                 w.write(col_next, 1,
-                        detail['total_valid_bz_ratio_%s' % product])
-                w.write_url(col_next, 2, reported_url, string=reported)
+                        detail['total_catch_bz_ratio_%s' % product])
+                w.write_url(col_next, 2, valid_reported_url, string=valid_reported)
                 w.write_url(col_next, 3, qa_contact_url, string=qa_contact)
-                w.write(col_next, 4, detail['high_ratio_%s' % product])
+                w.write(col_next, 4, detail['high_catch_ratio_%s' % product])
                 w.write_url(col_next, 5, reported_url_h, string=reported_h)
                 w.write_url(col_next, 6, qa_contact_url_h, string=qa_contact_h)
+                w.write(col_next, 7, detail['fixed_ratio_%s' % product])
+                w.write_url(col_next, 8, fixed_url, string=fixed_num)
+                w.write(col_next, 9, detail['invalid_ratio_%s' % product])
+                w.write_url(col_next, 10, invalid_url, string=invalid_num)
                 col_next = col_next + len_list + 1
 
         ws.close()
