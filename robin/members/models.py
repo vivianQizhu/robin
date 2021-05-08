@@ -6,6 +6,13 @@ from commons.models import Timestampable
 from django.utils.translation import ugettext_lazy as _
 
 
+MULTI_ARCH_TYPE = (
+    (1, "N/A"),
+    (2, "s390/s390x"),
+    (3, "aarch64"),
+)
+
+
 class Team(Timestampable, models.Model):
     """
     Defines fields of a team.
@@ -40,6 +47,8 @@ class Member(Timestampable, models.Model):
     serving = models.BooleanField(default=True, verbose_name='on the job')
     leave_date = models.DateField(null=True, blank=True, verbose_name='leave date')
     team = models.ForeignKey('Team', related_name='members', verbose_name=u'team')
+    multi_arch_type = models.IntegerField(default=1, choices=MULTI_ARCH_TYPE,
+                                          verbose_name='multi arch')
     objects = MemberManager()
 
     class Meta:
