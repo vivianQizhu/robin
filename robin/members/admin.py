@@ -25,7 +25,8 @@ class MemberAdmin(admin.ModelAdmin):
                     'kerbroes_id',
                     'serving',
                     'leave_date',
-                    'team')
+                    'team',
+                    'multi_arch_type')
     empty_value_display = 'unknown'
 
     def team(self, obj):

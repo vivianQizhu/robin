@@ -213,7 +213,6 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
                             if (bug.qa_contact in kerbroes_id_list) or (bug.qa_contact == 'virt-bugs'):
                                 new_count += 1
                     else:
-                        for bug in bugs:
                         new_count = bugs.count()
                     product_num.update({key: new_count + product_num[key]})
                     product_num.update({'all': product_num['all'] + new_count})
