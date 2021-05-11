@@ -175,3 +175,35 @@ class ProductBug(models.Model):
 
     def __unicode__(self):
         return str(self.bug_id)
+
+
+class MultiArchProductBugManager(models.Manager):
+
+    def is_exist(self, bug_id):
+        return True if self.get_queryset().filter(bug_id=bug_id) else False
+
+
+class MultiArchProductBug(models.Model):
+    """
+    Defines fields of a product bug.
+    """
+    bug_id = models.IntegerField(unique=True, verbose_name='bug id')
+    reporter = models.CharField(max_length=32, verbose_name='bug reporter')
+    qa_contact = models.CharField(max_length=32, verbose_name='bug qa_contact')
+    bug_product = models.CharField(max_length=100, verbose_name='bug product')
+    component = models.CharField(max_length=32, verbose_name='bug component')
+    priority = models.CharField(max_length=32, verbose_name='bug priority')
+    qa_whiteboard = models.CharField(max_length=100, verbose_name='bug qa whiteboard')
+    created_at = models.DateTimeField(verbose_name='bug created date')
+    status = models.CharField(max_length=10, verbose_name='bug status')
+    resolution = models.CharField(max_length=32, verbose_name='bug resolution')
+    hardware = models.CharField(max_length=10, verbose_name='bug hardware')
+
+    objects = MultiArchProductBugManager()
+
+    class Meta:
+        verbose_name = _('multi_arch_product_bug')
+        verbose_name_plural = _('multi_arch_product_bugs')
+
+    def __unicode__(self):
+        return str(self.bug_id)

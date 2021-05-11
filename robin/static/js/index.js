@@ -60,7 +60,7 @@ var reopData = new Vue({
         msg: '',
         alertType: 'success',
         category: '',
-        isProduct: false,
+        productType: 0,
         hasRes: false,
         repoData: {
             count: 0,
@@ -91,6 +91,7 @@ var reopData = new Vue({
             pendingPatchs: [],
         },
         productAll: [],
+        productMultiArch: [],
         resData: {},
         repoTmp: [],
         teamTmp: [],
@@ -367,6 +368,7 @@ var reopData = new Vue({
                 });
             get('/api/stats/bugs/', {
                 stats_type: 1,
+                product_type: self.productType,
                 team_code: team_codes.join(','),
                 kerbroes_id: kerbroes_ids.join(','),
                 start_date: self.beginTime,
@@ -396,6 +398,7 @@ var reopData = new Vue({
                 });
             get('/api/stats/bugs/', {
                 stats_type: 1,
+                product_type: self.productType,
                 team_code: self.selectedTeam,
                 kerbroes_id: kerbroes_ids.join(','),
                 start_date: self.beginTime,
@@ -412,7 +415,7 @@ var reopData = new Vue({
         returnBack: function() {
             this.resData = {};
             this.hasRes = false;
-            this.isProduct = false;
+            this.productType = 0;
         },
         chooseRepo: function(repo) {
             if (!repo.checked) {
@@ -451,7 +454,7 @@ var reopData = new Vue({
             // console.log(self.repoTmp[0].repo);
             // console.log(self.teamTmp);
             self.type = 2;
-            if (self.isProduct == true)
+            if (self.productType == 1)
             {
                 $('#productTeamModal').modal('show')
             }
@@ -469,7 +472,7 @@ var reopData = new Vue({
             // console.log(self.repoTmp[0].repo);
             // console.log(self.memberTmp[0].name);
             self.type = 1;
-            if (self.isProduct == true)
+            if (self.productType == 1)
             {
                 $('#productMemberModal').modal('show')
             }
@@ -518,8 +521,9 @@ var reopData = new Vue({
         },
         setAllProduct: function(){
             var self = this;
-            self.isProduct = true;
-            get('/api/bugsall/').then(function(res) {
+            self.productType = 1;
+            get('/api/bugsall/',{ product_type: self.productType}
+                ).then(function(res) {
             console.log(res)
             self.productAll = res;
             self.hasRes = false;
@@ -536,8 +540,29 @@ var reopData = new Vue({
             self.endTime = time;
             });
         },
+        setMultiArchProduct: function(){
+            var self = this;
+            this.productType = 2;
+            get('/api/bugsall/',{ product_type: self.productType}
+                ).then(function(res) {
+            console.log(res)
+            self.productMultiArch = res;
+            self.hasRes = false;
+            var time = formatTime(+new Date(), 'Y-M-D');
+            $('#p_t_start_date').datepicker({
+                defaultViewDate: time
+            });
+            $('#p_t_end_date').datepicker();
+            $('#p_m_start_date').datepicker({
+                defaultViewDate: time
+            });
+            $('#p_m_end_date').datepicker();
+            self.beginTime = time;
+            self.endTime = time;
+            });
+        },
         setProduct: function(){
-            this.isProduct = false;
+            this.productType = 0;
         },
         exportExcel: function(){
             var self = this;

@@ -21,6 +21,7 @@
             <a data-toggle="tab" href="#automation" @click="setProduct">Repositories</a>
         </li>
         <li><a data-toggle="tab" href="#product" @click="setAllProduct">Product</a></li>
+        <li><a data-toggle="tab" href="#product_multi_arch" @click="setMultiArchProduct">Product Multi-Arch</a></li>
     </ul>
 
     <div class="tab-content">
@@ -196,6 +197,119 @@
                         <td></td>
                     </tr>
                     <tr v-for="item in productAll.results">
+                        <td>${item.team}</td>
+                        <td>${item.total_catch_bz_ratio_rhel9}</td>
+                        <td><a href="${item.valid_reported_url_rhel9}">${item.valid_reported_rhel9}</a></td>
+                        <td><a href="${item.qa_contact_url_rhel9}">${item.qa_contact_rhel9}</a></td>
+                        <td>${item.high_catch_ratio_rhel9}</td>
+                        <td><a href="${item.high_reported_url_rhel9}">${item.high_reported_rhel9}</a></td>
+                        <td style="border-right:#cccccc solid 1px;"><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
+                        <td>${item.fixed_ratio_rhel9}</td>
+                        <td><a href="${item.fixed_url_rhel9}">${item.fixed_num_rhel9}</a></td>
+                        <td>${item.invalid_ratio_rhel9}</td>
+                        <td><a href="${item.invalid_url_rhel9}">${item.invalid_num_rhel9}</a></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td><button class="btn btn-primary" v-on:click="exportExcel()">Export</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="product_multi_arch" class="tab-pane fade">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Team Name</th>
+                        <th>Catch BZs Ratio</th>
+                        <th>Reported Valid</th>
+                        <th>QA Contact</th>
+                        <th>High&Above Catch Ratio</th>
+                        <th>High&Above Reported Valid</th>
+                        <th style="border-right:#cccccc solid 1px;">High&Above QA Contact</th>
+                        <th>Fixed Ratio</th>
+                        <th>Fixed</th>
+                        <th>Invalid Ratio</th>
+                        <th>Reported Invalid</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="text-align:left;font-weight:bold">Summary</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr v-for="item in productMultiArch.results">
+                        <td>${item.team}</td>
+                        <td>${item.total_catch_bz_ratio_all}</td>
+                        <td><a href="${item.valid_reported_url_all}">${item.valid_reported_all}</a></td>
+                        <td><a href="${item.qa_contact_url_all}">${item.qa_contact_all}</a></td>
+                        <td>${item.high_catch_ratio_all}</td>
+                        <td><a href="${item.high_reported_url_all}">${item.high_reported_all}</a></td>
+                        <td style="border-right:#cccccc solid 1px;"><a href="${item.high_qa_contact_url_all}">${item.high_qa_contact_all}</a></td>
+                        <td>${item.fixed_ratio_all}</td>
+                        <td><a href="${item.fixed_url_all}">${item.fixed_num_all}</a></td>
+                        <td>${item.invalid_ratio_all}</td>
+                        <td><a href="${item.invalid_url_all}">${item.invalid_num_all}</a></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;font-weight:bold">RHEL 8</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr v-for="item in productMultiArch.results">
+                        <td>${item.team}</td>
+                        <td>${item.total_catch_bz_ratio_rhel8}</td>
+                        <td><a href="${item.valid_reported_url_rhel8}">${item.valid_reported_rhel8}</a></td>
+                        <td><a href="${item.qa_contact_url_rhel8}">${item.qa_contact_rhel8}</a></td>
+                        <td>${item.high_catch_ratio_rhel8}</td>
+                        <td><a href="${item.high_reported_url_rhel8}">${item.high_reported_rhel8}</a></td>
+                        <td style="border-right:#cccccc solid 1px;"><a href="${item.high_qa_contact_url_rhel8}">${item.high_qa_contact_rhel8}</a></td>
+                        <td>${item.fixed_ratio_rhel8}</td>
+                        <td><a href="${item.fixed_url_rhel8}">${item.fixed_num_rhel8}</a></td>
+                        <td>${item.invalid_ratio_rhel8}</td>
+                        <td><a href="${item.invalid_url_rhel8}">${item.invalid_num_rhel8}</a></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;font-weight:bold">RHEL 9</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr v-for="item in productMultiArch.results">
                         <td>${item.team}</td>
                         <td>${item.total_catch_bz_ratio_rhel9}</td>
                         <td><a href="${item.valid_reported_url_rhel9}">${item.valid_reported_rhel9}</a></td>
@@ -501,117 +615,8 @@
 
 <!-- ============================= res =============================-->
 <div v-if="hasRes" transition="expand" v-cloak>
-    <div v-if="isProduct == true">
-        <h3 style="float:left">Product Data</h3>
-        <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
-        <hr style="width:100%">
 
-        <table class="table table-striped" >
-            <thead>
-                <tr>
-                     <th>Catch BZs Ratio</th>
-                     <th>Reported Valid</th>
-                     <th>QA Contact</th>
-                     <th>High&Above Catch Ratio</th>
-                     <th>High&Above Reported Valid</th>
-                     <th>High&Above QA Contact</th>
-                     <th style="border-right:#cccccc solid 1px;">Fixed Ratio</th>
-                     <th>Fixed Bz</th>
-                     <th>Invalid Ratio</th>
-                     <th>Reported Invalid</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="text-align:left;font-weight:bold">Summary</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-                <tr v-for="item in resData.results">
-                    <td>${item.total_catch_bz_ratio_all}</td>
-                    <td><a href="${item.valid_reported_url_all}">${item.valid_reported_all}</a></td>
-                    <td><a href="${item.qa_contact_url_all}">${item.qa_contact_all}</a></td>
-                    <td>${item.high_catch_ratio_all}</td>
-                    <td><a href="${item.high_reported_url_all}">${item.high_reported_all}</a></td>
-                    <td><a href="${item.high_qa_contact_url_all}">${item.high_qa_contact_all}</a></td>
-                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_all}</td>
-                    <td><a href="${item.fixed_url_all}">${item.fixed_num_all}</a></td>
-                    <td>${item.invalid_ratio_all}</td>
-                    <td><a href="${item.invalid_url_all}">${item.invalid_num_all}</a></td>
-                </tr>
-                <tr>
-                    <td style="text-align:left;font-weight:bold">RHEL 8</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-                <tr v-for="item in resData.results">
-                    <td>${item.total_catch_bz_ratio_rhel8}</td>
-                    <td><a href="${item.valid_reported_url_rhel8}">${item.valid_reported_rhel8}</a></td>
-                    <td><a href="${item.qa_contact_url_rhel8}">${item.qa_contact_rhel8}</a></td>
-                    <td>${item.high_catch_ratio_rhel8}</td>
-                    <td><a href="${item.high_reported_url_rhel8}">${item.high_reported_rhel8}</a></td>
-                    <td><a href="${item.high_qa_contact_url_rhel8}">${item.high_qa_contact_rhel8}</a></td>
-                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_rhel8}</td>
-                    <td><a href="${item.fixed_url_rhel8}">${item.fixed_num_rhel8}</a></td>
-                    <td>${item.invalid_ratio_rhel8}</td>
-                    <td><a href="${item.invalid_url_rhel8}">${item.invalid_num_rhel8}</a></td>
-                </tr>
-                <tr>
-                    <td style="text-align:left;font-weight:bold">RHEL 9</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-                <tr v-for="item in resData.results">
-                    <td>${item.total_catch_bz_ratio_rhel9}</td>
-                    <td><a href="${item.valid_reported_url_rhel9}">${item.valid_reported_rhel9}</a></td>
-                    <td><a href="${item.qa_contact_url_rhel9}">${item.qa_contact_rhel9}</a></td>
-                    <td>${item.high_catch_ratio_rhel9}</td>
-                    <td><a href="${item.high_reported_url_rhel9}">${item.high_reported_rhel9}</a></td>
-                    <td><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
-                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_rhel9}</td>
-                    <td><a href="${item.fixed_url_rhel9}">${item.fixed_num_rhel9}</a></td>
-                    <td>${item.invalid_ratio_rhel9}</td>
-                    <td><a href="${item.invalid_url_rhel9}">${item.invalid_num_rhel9}</a></td>
-                </tr>
-                <tr>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td><button class="btn btn-primary" v-on:click="exportExcel()">Export</button></td>
-                </tr>
-            </tbody>
-        </table>
-        <div>The statistic does not include exceptions, please check the bz link for more details</div>
-    </div>
-
-    <div v-if="isProduct == false">
+    <div v-if="productType == 0">
         <div v-if="category == 'closedPatchs'">
             <h3 style="float:left">Merged Patches</h3>
             <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
@@ -872,6 +877,227 @@
             </table>
         </div>
     </div>
+
+    <div v-if="productType == 1">
+        <h3 style="float:left">Product Data</h3>
+        <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
+        <hr style="width:100%">
+
+        <table class="table table-striped" >
+            <thead>
+                <tr>
+                     <th>Catch BZs Ratio</th>
+                     <th>Reported Valid</th>
+                     <th>QA Contact</th>
+                     <th>High&Above Catch Ratio</th>
+                     <th>High&Above Reported Valid</th>
+                     <th>High&Above QA Contact</th>
+                     <th style="border-right:#cccccc solid 1px;">Fixed Ratio</th>
+                     <th>Fixed Bz</th>
+                     <th>Invalid Ratio</th>
+                     <th>Reported Invalid</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="text-align:left;font-weight:bold">Summary</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr v-for="item in resData.results">
+                    <td>${item.total_catch_bz_ratio_all}</td>
+                    <td><a href="${item.valid_reported_url_all}">${item.valid_reported_all}</a></td>
+                    <td><a href="${item.qa_contact_url_all}">${item.qa_contact_all}</a></td>
+                    <td>${item.high_catch_ratio_all}</td>
+                    <td><a href="${item.high_reported_url_all}">${item.high_reported_all}</a></td>
+                    <td><a href="${item.high_qa_contact_url_all}">${item.high_qa_contact_all}</a></td>
+                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_all}</td>
+                    <td><a href="${item.fixed_url_all}">${item.fixed_num_all}</a></td>
+                    <td>${item.invalid_ratio_all}</td>
+                    <td><a href="${item.invalid_url_all}">${item.invalid_num_all}</a></td>
+                </tr>
+                <tr>
+                    <td style="text-align:left;font-weight:bold">RHEL 8</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr v-for="item in resData.results">
+                    <td>${item.total_catch_bz_ratio_rhel8}</td>
+                    <td><a href="${item.valid_reported_url_rhel8}">${item.valid_reported_rhel8}</a></td>
+                    <td><a href="${item.qa_contact_url_rhel8}">${item.qa_contact_rhel8}</a></td>
+                    <td>${item.high_catch_ratio_rhel8}</td>
+                    <td><a href="${item.high_reported_url_rhel8}">${item.high_reported_rhel8}</a></td>
+                    <td><a href="${item.high_qa_contact_url_rhel8}">${item.high_qa_contact_rhel8}</a></td>
+                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_rhel8}</td>
+                    <td><a href="${item.fixed_url_rhel8}">${item.fixed_num_rhel8}</a></td>
+                    <td>${item.invalid_ratio_rhel8}</td>
+                    <td><a href="${item.invalid_url_rhel8}">${item.invalid_num_rhel8}</a></td>
+                </tr>
+                <tr>
+                    <td style="text-align:left;font-weight:bold">RHEL 9</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr v-for="item in resData.results">
+                    <td>${item.total_catch_bz_ratio_rhel9}</td>
+                    <td><a href="${item.valid_reported_url_rhel9}">${item.valid_reported_rhel9}</a></td>
+                    <td><a href="${item.qa_contact_url_rhel9}">${item.qa_contact_rhel9}</a></td>
+                    <td>${item.high_catch_ratio_rhel9}</td>
+                    <td><a href="${item.high_reported_url_rhel9}">${item.high_reported_rhel9}</a></td>
+                    <td><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
+                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_rhel9}</td>
+                    <td><a href="${item.fixed_url_rhel9}">${item.fixed_num_rhel9}</a></td>
+                    <td>${item.invalid_ratio_rhel9}</td>
+                    <td><a href="${item.invalid_url_rhel9}">${item.invalid_num_rhel9}</a></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td><button class="btn btn-primary" v-on:click="exportExcel()">Export</button></td>
+                </tr>
+            </tbody>
+        </table>
+        <div>The statistic does not include exceptions, please check the bz link for more details</div>
+    </div>
+
+    <div v-if="productType == 2">
+        <h3 style="float:left">Product Data</h3>
+        <!-- <h5 style="float:right; line-height: 60px">${resData.count} in total</h5> -->
+        <hr style="width:100%">
+
+        <table class="table table-striped" >
+            <thead>
+                <tr>
+                     <th>Catch BZs Ratio</th>
+                     <th>Reported Valid</th>
+                     <th>QA Contact</th>
+                     <th>High&Above Catch Ratio</th>
+                     <th>High&Above Reported Valid</th>
+                     <th>High&Above QA Contact</th>
+                     <th style="border-right:#cccccc solid 1px;">Fixed Ratio</th>
+                     <th>Fixed Bz</th>
+                     <th>Invalid Ratio</th>
+                     <th>Reported Invalid</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="text-align:left;font-weight:bold">Summary</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr v-for="item in resData.results">
+                    <td>${item.total_catch_bz_ratio_all}</td>
+                    <td><a href="${item.valid_reported_url_all}">${item.valid_reported_all}</a></td>
+                    <td><a href="${item.qa_contact_url_all}">${item.qa_contact_all}</a></td>
+                    <td>${item.high_catch_ratio_all}</td>
+                    <td><a href="${item.high_reported_url_all}">${item.high_reported_all}</a></td>
+                    <td><a href="${item.high_qa_contact_url_all}">${item.high_qa_contact_all}</a></td>
+                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_all}</td>
+                    <td><a href="${item.fixed_url_all}">${item.fixed_num_all}</a></td>
+                    <td>${item.invalid_ratio_all}</td>
+                    <td><a href="${item.invalid_url_all}">${item.invalid_num_all}</a></td>
+                </tr>
+                <tr>
+                    <td style="text-align:left;font-weight:bold">RHEL 8</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr v-for="item in resData.results">
+                    <td>${item.total_catch_bz_ratio_rhel8}</td>
+                    <td><a href="${item.valid_reported_url_rhel8}">${item.valid_reported_rhel8}</a></td>
+                    <td><a href="${item.qa_contact_url_rhel8}">${item.qa_contact_rhel8}</a></td>
+                    <td>${item.high_catch_ratio_rhel8}</td>
+                    <td><a href="${item.high_reported_url_rhel8}">${item.high_reported_rhel8}</a></td>
+                    <td><a href="${item.high_qa_contact_url_rhel8}">${item.high_qa_contact_rhel8}</a></td>
+                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_rhel8}</td>
+                    <td><a href="${item.fixed_url_rhel8}">${item.fixed_num_rhel8}</a></td>
+                    <td>${item.invalid_ratio_rhel8}</td>
+                    <td><a href="${item.invalid_url_rhel8}">${item.invalid_num_rhel8}</a></td>
+                </tr>
+                <tr>
+                    <td style="text-align:left;font-weight:bold">RHEL 9</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr v-for="item in resData.results">
+                    <td>${item.total_catch_bz_ratio_rhel9}</td>
+                    <td><a href="${item.valid_reported_url_rhel9}">${item.valid_reported_rhel9}</a></td>
+                    <td><a href="${item.qa_contact_url_rhel9}">${item.qa_contact_rhel9}</a></td>
+                    <td>${item.high_catch_ratio_rhel9}</td>
+                    <td><a href="${item.high_reported_url_rhel9}">${item.high_reported_rhel9}</a></td>
+                    <td><a href="${item.high_qa_contact_url_rhel9}">${item.high_qa_contact_rhel9}</a></td>
+                    <td style="border-right:#cccccc solid 1px;">${item.fixed_ratio_rhel9}</td>
+                    <td><a href="${item.fixed_url_rhel9}">${item.fixed_num_rhel9}</a></td>
+                    <td>${item.invalid_ratio_rhel9}</td>
+                    <td><a href="${item.invalid_url_rhel9}">${item.invalid_num_rhel9}</a></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td><button class="btn btn-primary" v-on:click="exportExcel()">Export</button></td>
+                </tr>
+            </tbody>
+        </table>
+        <div>The statistic does not include exceptions, please check the bz link for more details</div>
+    </div>
+
 </div>
 <!-- ============================= res =============================-->
 

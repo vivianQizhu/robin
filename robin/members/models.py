@@ -8,7 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 
 MULTI_ARCH_TYPE = (
     (1, "N/A"),
-    (2, "s390/s390x"),
+    (2, "s390 s390x"),
     (3, "aarch64"),
 )
 

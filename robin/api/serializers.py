@@ -20,6 +20,12 @@ EXPORT_TYPE = (
     (3, "All"),
 )
 
+PRODUCT_TYPE = (
+    (0, "Automation"),
+    (1, "Product_x86_ppc"),
+    (2, "Product_arm_s390"),
+)
+
 class RepositorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Repository
@@ -81,6 +87,7 @@ class PendingSerializer(serializers.Serializer):
 
 class BugStatsSerializer(serializers.Serializer):
     stats_type = serializers.ChoiceField(choices=STATS_TYPE, required=True)
+    product_type = serializers.ChoiceField(choices=PRODUCT_TYPE, required=True)
     team_code = serializers.CharField(required=False)
     kerbroes_id = serializers.CharField(required=False)
     start_date = serializers.DateField(required=True)
@@ -89,3 +96,10 @@ class BugStatsSerializer(serializers.Serializer):
     class Meta:
         fields = ('stats_type', 'team_code', 'kerbroes_id',
                   'query_start_date', 'query_end_date')
+
+
+class BugSummarySerializer(serializers.Serializer):
+    product_type = serializers.ChoiceField(choices=PRODUCT_TYPE, required=True)
+
+    class Meta:
+        fields = ('product_type',)

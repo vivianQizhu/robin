@@ -12,7 +12,12 @@ from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from statistics.models import Repository, Pull, Commit, Comment, ProductBug
+from statistics.models import (Repository,
+                               Pull,
+                               Commit,
+                               Comment,
+                               ProductBug,
+                               MultiArchProductBug)
 
 from .serializers import (RepositorySerializer,
                           TeamSerializer,
@@ -20,7 +25,10 @@ from .serializers import (RepositorySerializer,
                           BasesStatsSerializer,
                           CommentStatsSerializer,
                           MemberSerializer,
-                          BugStatsSerializer)
+                          BugStatsSerializer,
+                          BugSummarySerializer)
+
+from members.models import MULTI_ARCH_TYPE as MULTI_ARCH_TYPE
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +93,6 @@ def _get_bz_url(start_date, end_date, kerbroes_id_list,
                      % (str(start_date)[:10], str(end_date)[:10]))
 
     fields = {
-        'rep_platform': ["Unspecified", "All", "x86_64", "ppc64", "ppc64le"],
         'component': ['qemu-kvm', 'kernel', 'virtio-win', 'seabios', 'edk2',
                       'slof', 'qemu-guest-agent', 'dtc', 'kernel-rt', 'ovmf',
                       'libtpms', 'virglrenderer', 'qemu-kvm-rhev', 'kernel-rt',
@@ -117,14 +124,15 @@ def _get_bz_url(start_date, end_date, kerbroes_id_list,
     return valid_bz_url
 
 
-def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False):
+def _bug_status(start_date, end_date, kerbroes_id_list,
+                exclude_acceptance=False, arch=None):
     details = {}
     cgi_base_url = (
         'https://bugzilla.redhat.com/buglist.cgi?columnlist=product'
         '%2Ccomponent%2Cassigned_to%2Cbug_status%2Cresolution'
         '%2Cshort_desc%2Cflagtypes.name%2Cqa_contact%2Creporter'
         '%2Ckeywords%2Cpriority%2Cbug_severity%2Ccf_qa_whiteboard'
-        '%2Cversion')
+        '%2Cversion%2Cplatform')
     end_date = end_date + timedelta(days=1)
 
     product = {'rhel8': ["Red Hat Enterprise Linux 8",
@@ -133,7 +141,17 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
     product_names = product.keys()
     product_names.append('all')
 
+    if not arch:
+        platform_field = {
+            'rep_platform': ["Unspecified", "All", "x86_64", "ppc64", "ppc64le"]}
+        bug_model = ProductBug
+    else:
+        platform_field = {'rep_platform': arch.split()}
+        bug_model = MultiArchProductBug
+    with open('/tmp/robin.log', 'a') as f:
+        f.write(str(bug_model))
     bz_url_all = _get_bz_url(start_date, end_date, kerbroes_id_list,
+                             extra_field=platform_field,
                              exclude_acceptance=exclude_acceptance)
 
     def get_num_valid(list_id, bz_filter='reporter', high=False):
@@ -141,6 +159,7 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
             'bug_status': ['NEW', 'ASSIGNED', 'POST', 'MODIFIED', 'ON_QA',
                            'VERIFIED', 'CLOSED'],
             'resolution': ["---", "CURRENTRELEASE", "ERRATA"]}
+        fields.update(platform_field)
         bz_url = _get_bz_url(start_date, end_date, kerbroes_id_list,
                              extra_field=fields,
                              exclude_acceptance=exclude_acceptance)
@@ -152,6 +171,7 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
         fields = {
             'bug_status': ['CLOSED', 'MODIFIED', 'VERIFIED'],
             'resolution': ["---", "CURRENTRELEASE", "ERRATA"]}
+        fields.update(platform_field)
         bz_url = _get_bz_url(start_date, end_date, kerbroes_id_list,
                              extra_field=fields,
                              exclude_acceptance=exclude_acceptance)
@@ -164,6 +184,7 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
             'bug_status': ['CLOSED'],
             'resolution': ["NOTABUG", "DUPLICATE", "INSUFFICIENT_DATA",
                            "CANTFIX", "NEXTRELEASE", "WORKSFORME","WONTFIX"]}
+        fields.update(platform_field)
         bz_url = _get_bz_url(start_date, end_date, kerbroes_id_list,
                              extra_field=fields,
                              exclude_acceptance=exclude_acceptance)
@@ -190,19 +211,23 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
                 if p_name == 'Red Hat Enterprise Linux Advanced Virtualization':
                     continue
                 filter_dict = {'bug_product': p_name}
+                if arch:
+                    filter_dict.update({'hardware': arch})
                 if extra_filter:
                     filter_dict.update(extra_filter)
                 for kerbroes_id in kerbroes_id_list:
                     filter_dict.update({bz_filter: kerbroes_id})
                     if high:
                         filter_dict.update({'priority': 'high'})
-                    bugs = ProductBug.objects.filter(**filter_dict).filter(
+                    with open('/tmp/robin.log', 'a') as f:
+                        f.write('filter: %s' % str(filter_dict))
+                    bugs = bug_model.objects.filter(**filter_dict).filter(
                         created_at__range=(start_date, end_date))
                     if exclude_acceptance:
                         bugs = bugs.exclude(qa_whiteboard__contains='acceptance')
                     if high:
                         filter_dict.update({'priority': 'urgent'})
-                        u_bugs = ProductBug.objects.filter(**filter_dict).filter(
+                        u_bugs = bug_model.objects.filter(**filter_dict).filter(
                             created_at__range=(start_date, end_date))
                         if exclude_acceptance:
                             u_bugs = u_bugs.exclude(qa_whiteboard__contains='acceptance')
@@ -218,6 +243,8 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
                     product_num.update({'all': product_num['all'] + new_count})
             url_list.update({key: url_r_tmp})
         url_list.update({'all': url_r + product_filter_str})
+        with open('/tmp/robin.log', 'a') as f:
+            f.write("product_num, url_list: %s\n %s" % (str(product_num), str(url_list)))
 
         return product_num, url_list
 
@@ -268,6 +295,8 @@ def _bug_status(start_date, end_date, kerbroes_id_list, exclude_acceptance=False
              'invalid_ratio_%s' % (product_name): invalid_ratio
              })
 
+    with open('/tmp/robin.log', 'a') as f:
+        f.write(str(details))
     return details
 
 
@@ -298,21 +327,20 @@ class RepoListView(APIView):
 
 
 class BugListView(APIView):
-    """ returns bug status for the whole group"""
+    """ returns bug status based on the product type(x86/ppc or arm/s390)"""
 
-    def get(self, request, format=None):
-        logger.info('[bug_status] Received data is valid.')
-        details = []
-        end_date = datetime.today()
-        year = date.today().year
-        start_date = datetime(year, 1, 1, 0, 0, 0)
-        # Whole team data
+    details = []
+
+    def _get_x86_n_ppc_bug_data(self, start_date, end_date):
+        """
+        Generate bug data for the whole group
+        """
         members = Member.objects.all()
         kerbroes_id_list = [member.kerbroes_id for member in members]
         kerbroes_id_list.append('virt-bugs')
         d = _bug_status(start_date, end_date, kerbroes_id_list)
         d.update({'team': 'KVM_QE_ALL'})
-        details.append(d)
+        self.details.append(d)
         # Subteam data
         teams = Team.objects.all()
         for team in teams:
@@ -322,11 +350,43 @@ class BugListView(APIView):
             excl_acpt = False if team.team_code == 'qzhang' else True
             d = _bug_status(start_date, end_date, kerbroes_id_list, excl_acpt)
             d.update({'team': team.team_name})
-            details.append(d)
-        global PRODUCT_BUG_DATA
-        PRODUCT_BUG_DATA = details
-        response = _paginate_response(details, request)
-        return response
+            self.details.append(d)
+
+    def _get_multi_arch_bug_data(self, start_date, end_date):
+        """
+        Generate bug data for multi arch group
+        """
+        for arch in MULTI_ARCH_TYPE[1:]:
+            with open('/tmp/robin.log', 'a') as f:
+                f.write('arch: %s' % str(arch))
+            members = Member.objects.filter(multi_arch_type=arch[0])
+            kerbroes_id_list = [member.kerbroes_id for member in members]
+            with open('/tmp/robin.log', 'a') as f:
+                f.write('kerbroes_id_list: %s' % str(kerbroes_id_list))
+            d = _bug_status(start_date, end_date, kerbroes_id_list, arch=arch[1])
+            d.update({'team': arch[1].replace(' ', '/')})
+            self.details.append(d)
+
+    def get(self, request, format=None):
+        logger.info('[bug_status] Received data is valid.')
+        serializer = BugSummarySerializer(data=request.query_params)
+        self.details = []
+        if serializer.is_valid():
+            product_type = serializer.validated_data['product_type']
+            end_date = datetime.today()
+            year = date.today().year
+            start_date = datetime(year, 1, 1, 0, 0, 0)
+            with open('/tmp/robin.log', 'a') as f:
+                f.write(str(product_type))
+            if product_type == 1:
+                self._get_x86_n_ppc_bug_data(start_date, end_date)
+            elif product_type == 2:
+                self._get_multi_arch_bug_data(start_date, end_date)
+            global PRODUCT_BUG_DATA
+            PRODUCT_BUG_DATA = self.details
+            response = _paginate_response(self.details, request)
+            return response
+        raise APIError(APIError.INVALID_REQUEST_DATA, detail=serializer.errors)
 
 
 class TeamListView(APIView):
@@ -653,23 +713,33 @@ def bug_status_team(request):
             start_date = serializer.validated_data['start_date']
             end_date = serializer.validated_data['end_date']
             team_code = serializer.validated_data.get('team_code', '')
-            kerbroes_id_list = _stats_type_sortor(
-                serializer.validated_data['stats_type'],
-                team_code,
-                serializer.validated_data.get('kerbroes_id', ''))
-            excl_accept = False if 'qzhang' in 'team_code' else True
-            team = Team.objects.filter(team_code='qzhang')
-            q_members = Member.objects.filter(team=team)
-            qzhang_members = [member.kerbroes_id for member in q_members]
-            if set(qzhang_members) & set(kerbroes_id_list):
-                excl_accept = False
-            det = _bug_status(start_date, end_date, kerbroes_id_list, excl_accept)
-            if len(kerbroes_id_list) > 1:
-                name = team_code
+            product_type = serializer.validated_data.get('product_type', '')
+            if product_type == 2:
+                for arch in MULTI_ARCH_TYPE[1:]:
+                    members = Member.objects.filter(multi_arch_type=arch[0])
+                    kerbroes_id_list = [member.kerbroes_id for member in members]
+                    d = _bug_status(start_date, end_date, kerbroes_id_list,
+                                    arch=arch[1])
+                    d.update({'team': arch[1]})
+                    details.append(d)
             else:
-                name = kerbroes_id_list[0]
-            det.update({'team': name})
-            details.append(det)
+                kerbroes_id_list = _stats_type_sortor(
+                    serializer.validated_data['stats_type'],
+                    team_code,
+                    serializer.validated_data.get('kerbroes_id', ''))
+                excl_accept = False if 'qzhang' in 'team_code' else True
+                team = Team.objects.filter(team_code='qzhang')
+                q_members = Member.objects.filter(team=team)
+                qzhang_members = [member.kerbroes_id for member in q_members]
+                if set(qzhang_members) & set(kerbroes_id_list):
+                    excl_accept = False
+                det = _bug_status(start_date, end_date, kerbroes_id_list, excl_accept)
+                if len(kerbroes_id_list) > 1:
+                    name = team_code
+                else:
+                    name = kerbroes_id_list[0]
+                det.update({'team': name})
+                details.append(det)
             global PRODUCT_BUG_DATA
             PRODUCT_BUG_DATA = details
             response = _paginate_response(details, request)

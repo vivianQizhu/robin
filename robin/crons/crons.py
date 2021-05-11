@@ -9,7 +9,7 @@ from datetime import timedelta, date, datetime
 from django.db import transaction as dbtransaction
 from commons import common_helpers
 from members.models import Member
-from statistics.models import Repository, Pull, Comment, ProductBug
+from statistics.models import Repository, Pull, Comment, ProductBug, MultiArchProductBug
 from scripts.githublight import Repository as Repo
 
 
@@ -269,105 +269,145 @@ def auto_change_pull_state():
 
 
 def auto_update_product_bug():
-    end_date = date.today()
-    start_date = date(end_date.year-1, 1, 1)
-    members = Member.objects.filter(serving=True)
-    kerbroes_id_list = [member.kerbroes_id for member in members]
-    rest_base_url = ('https://bugzilla.redhat.com/rest/bug?include_fields=id'
-                     '%2Cproduct%2Ccomponent%2Cqa_contact%2Ccreator%2Cpriority'
-                     '%2Ccreation_time%2Ccf_qa_whiteboard%2Cseverity%2Cstatus%2Cresolution')
-    robin_list_id = 'ROBIN_LIST_ID'
-    robin_role = 'ROBIN_ROLE'
-    valid_bz_url = ('&classification=Red%%20Hat&list_id=%s&query_format=advanced'
-                    '&f1=keywords&f2=%s&f3=cf_zstream_target_release'
-                    '&o1=nowordssubstr&o2=anywordssubstr&o3=isempty' %
-                    (robin_list_id, robin_role))
-    valid_bz_url += ('&chfield=%%5BBug%%20creation%%5D&chfieldfrom=%s&chfieldto=%s'
-                     % (start_date, end_date))
 
-    fields = {
-        'bug_status': ['NEW', 'ASSIGNED', 'POST', 'MODIFIED', 'ON_QA', 'VERIFIED', 'CLOSED'],
-        'rep_platform': ["Unspecified", "All", "x86_64", "ppc64", "ppc64le"],
-        'product': ["Red Hat Enterprise Linux 8",
-                    "Red Hat Enterprise Linux 9",
-                    "Red Hat Enterprise Linux Advanced Virtualization"],
-        'component': ['qemu-kvm', 'kernel', 'virtio-win', 'seabios', 'edk2',
-                      'slof', 'qemu-guest-agent', 'dtc', 'kernel-rt', 'ovmf',
-                      'libtpms', 'virglrenderer', 'qemu-kvm-rhev', 'kernel-rt',
-                      'qemu-guest-agent', 'qemu-kvm-ma','kernel-alt']}
-
-    filters = {'v1': ["ABIAssurance", "TechPreview", "ReleaseNotes", "Tracking",
-                     "Task", "HardwareEnablement", "SecurityTracking",
-                     "TestOnly", "Improvement", "FutureFeature", "Rebase",
-                     "FeatureBackport", "Documentation", "OtherQA", "RFE"],
-               'v2': kerbroes_id_list}
-    for key, value in fields.items():
-        for op in value:
-            valid_bz_url += '&%s=' % key
-            valid_bz_url += urllib.quote('%s' % op)
-
-    for key, value in filters.items():
-        valid_bz_url += '&%s=' % key
-        for op in value[:-1]:
-            valid_bz_url += urllib.quote('%s,' % op)
-        valid_bz_url += urllib.quote(value[-1])
-
-    valid_bz_url += '&api_key=mLPREvS9ArB97djTLlZBmRKeqkp8jDYrCeLX4U58'
-
-    bz_reported = valid_bz_url.replace(
-        robin_list_id, '11627322').replace(robin_role, 'reporter')
-    bz_qa_contact = valid_bz_url.replace(
-        robin_list_id, '11627320').replace(robin_role, 'qa_contact')
     import requests
-    session = requests.Session()
+
     def _get_bugs(c_url):
+        session = requests.Session()
         raw = session.get(rest_base_url + c_url)
         if raw.status_code != 200 or not raw.json().has_key('bugs'):
             logger.info(
-                '[CRON] auto_update_product_bug get bug info failed, detail: %s' % str(raw))
+                '[CRON] auto_update_product_bug get bug info failed, detail: %s' % str(
+                    raw))
             return False
         else:
             return raw.json()['bugs']
 
-    bug_list = _get_bugs(bz_reported)
-    bug_list.extend(_get_bugs(bz_qa_contact))
-    bug_list = reduce(lambda x, y: x if y in x else x + [y], [[], ] + bug_list)
+    def download_bug(kerbroes_id_list, multi_arch=False):
+        robin_list_id = 'ROBIN_LIST_ID'
+        robin_role = 'ROBIN_ROLE'
+        valid_bz_url = ('&classification=Red%%20Hat&list_id=%s&query_format=advanced'
+                        '&f1=keywords&f2=%s&f3=cf_zstream_target_release'
+                        '&o1=nowordssubstr&o2=anywordssubstr&o3=isempty' %
+                        (robin_list_id, robin_role))
+        valid_bz_url += ('&chfield=%%5BBug%%20creation%%5D&chfieldfrom=%s&chfieldto=%s'
+                         % (start_date, end_date))
 
-    ProductBug.objects.all().delete()
+        fields = {
+            'bug_status': ['NEW', 'ASSIGNED', 'POST', 'MODIFIED', 'ON_QA', 'VERIFIED', 'CLOSED'],
+            'product': ["Red Hat Enterprise Linux 8",
+                        "Red Hat Enterprise Linux 9",
+                        "Red Hat Enterprise Linux Advanced Virtualization"],
+            'component': ['qemu-kvm', 'kernel', 'virtio-win', 'seabios', 'edk2',
+                          'slof', 'qemu-guest-agent', 'dtc', 'kernel-rt', 'ovmf',
+                          'libtpms', 'virglrenderer', 'qemu-kvm-rhev', 'kernel-rt',
+                          'qemu-guest-agent', 'qemu-kvm-ma','kernel-alt']}
+        if multi_arch:
+            fields.update({'rep_platform': ['aarch64', 's390', 's390x']})
+        else:
+            fields.update(
+                {'rep_platform':
+                     ["Unspecified", "All", "x86_64", "ppc64", "ppc64le"]})
+
+        filters = {'v1': ["ABIAssurance", "TechPreview", "ReleaseNotes", "Tracking",
+                         "Task", "HardwareEnablement", "SecurityTracking",
+                         "TestOnly", "Improvement", "FutureFeature", "Rebase",
+                         "FeatureBackport", "Documentation", "OtherQA", "RFE"],
+                   'v2': kerbroes_id_list}
+
+        for key, value in fields.items():
+            for op in value:
+                valid_bz_url += '&%s=' % key
+                valid_bz_url += urllib.quote('%s' % op)
+
+        for key, value in filters.items():
+            valid_bz_url += '&%s=' % key
+            for op in value[:-1]:
+                valid_bz_url += urllib.quote('%s,' % op)
+            valid_bz_url += urllib.quote(value[-1])
+
+        valid_bz_url += '&api_key=mLPREvS9ArB97djTLlZBmRKeqkp8jDYrCeLX4U58'
+
+        bz_reported = valid_bz_url.replace(
+            robin_list_id, '11627322').replace(robin_role, 'reporter')
+        bz_qa_contact = valid_bz_url.replace(
+            robin_list_id, '11627320').replace(robin_role, 'qa_contact')
+
+        bug_list = _get_bugs(bz_reported)
+        bug_list.extend(_get_bugs(bz_qa_contact))
+        bug_list = reduce(lambda x, y: x if y in x else x + [y],
+                          [[], ] + bug_list)
+
+        if multi_arch:
+            bug_modal = MultiArchProductBug
+        else:
+            bug_modal = ProductBug
+        bug_modal.objects.all().delete()
+        for bug in bug_list:
+            qa_contact = bug['qa_contact'].split('@')[0]
+            qa_whiteboard = bug['cf_qa_whiteboard']
+            qa_whiteboard = 'acceptance' if 'acceptance' in qa_whiteboard else ''
+            high_keywords = ['high', 'urgent']
+            if bug[
+                'product'] == 'Red Hat Enterprise Linux Advanced Virtualization':
+                bug['product'] = 'Red Hat Enterprise Linux 8'
+            if (bug['severity'] in high_keywords and
+                    bug['priority'] not in high_keywords):
+                bug['priority'] = bug['severity']
+
+            if bug['resolution'] in ["NOTABUG", "DUPLICATE",
+                                     "INSUFFICIENT_DATA",
+                                     "CANTFIX", "NEXTRELEASE", "WORKSFORME",
+                                     "WONTFIX"]:
+                bug['resolution'] = "INVALID"
+            else:
+                if (bug['resolution'] in ['CURRENTRELEASE', 'ERRATA'] or
+                        bug['status'] in ['MODIFIED', 'VERIFIED']):
+                    bug['status'] = 'FIXED'
+                bug['resolution'] = 'VALID'
+            if multi_arch:
+                if 's390' in bug['platform']:
+                    bug['platform'] = 's390 s390x'
+                bug_modal.objects.create(bug_id=bug['id'],
+                                         reporter=bug['creator'].split('@')[0],
+                                         qa_contact=qa_contact,
+                                         bug_product=bug['product'],
+                                         component=bug['component'],
+                                         priority=bug['priority'],
+                                         qa_whiteboard=qa_whiteboard,
+                                         created_at=str(utc2local_parser(
+                                             bug['creation_time']))[:-6],
+                                         status=bug['status'],
+                                         resolution=bug['resolution'],
+                                         hardware=bug['platform'])
+            else:
+                bug_modal.objects.create(bug_id=bug['id'],
+                                         reporter=bug['creator'].split('@')[0],
+                                         qa_contact=qa_contact,
+                                         bug_product=bug['product'],
+                                         component=bug['component'],
+                                         priority=bug['priority'],
+                                         qa_whiteboard=qa_whiteboard,
+                                         created_at=str(utc2local_parser(
+                                             bug['creation_time']))[:-6],
+                                         status=bug['status'],
+                                         resolution=bug['resolution'])
+
+    end_date = date.today()
+    start_date = date(end_date.year - 1, 1, 1)
+    rest_base_url = ('https://bugzilla.redhat.com/rest/bug?include_fields=id'
+                     '%2Cproduct%2Ccomponent%2Cqa_contact%2Ccreator%2Cpriority'
+                     '%2Ccreation_time%2Ccf_qa_whiteboard%2Cseverity%2Cstatus%2Cresolution')
+    members = Member.objects.filter(serving=True)
+    kerbroes = [member.kerbroes_id for member in members]
+    download_bug(kerbroes)
+
+    members = Member.objects.filter(serving=True).exclude(multi_arch_type=1)
+    kerbroes = [member.kerbroes_id for member in members]
+    rest_base_url += '%2Cplatform'
+    download_bug(kerbroes, multi_arch=True)
     logger.info(
         '[CRON] auto_update_product_bug loading bugs into db')
-
-    for bug in bug_list:
-        qa_contact = bug['qa_contact'].split('@')[0]
-        qa_whiteboard = bug['cf_qa_whiteboard']
-        qa_whiteboard = 'acceptance' if 'acceptance' in qa_whiteboard else ''
-        high_keywords = ['high', 'urgent']
-        if bug['product'] == 'Red Hat Enterprise Linux Advanced Virtualization':
-            bug['product'] = 'Red Hat Enterprise Linux 8'
-        if (bug['severity'] in high_keywords and
-                bug['priority'] not in high_keywords):
-            bug['priority'] = bug['severity']
-
-        if bug['resolution'] in ["NOTABUG", "DUPLICATE", "INSUFFICIENT_DATA",
-                                 "CANTFIX", "NEXTRELEASE", "WORKSFORME",
-                                 "WONTFIX"]:
-            bug['resolution'] = "INVALID"
-        else:
-            if (bug['resolution'] in ['CURRENTRELEASE', 'ERRATA'] or
-                bug['status'] in ['MODIFIED', 'VERIFIED']):
-                bug['status'] = 'FIXED'
-            bug['resolution'] = 'VALID'
-
-        ProductBug.objects.create(bug_id=bug['id'],
-                                  reporter=bug['creator'].split('@')[0],
-                                  qa_contact=qa_contact,
-                                  bug_product=bug['product'],
-                                  component=bug['component'],
-                                  priority=bug['priority'],
-                                  qa_whiteboard=qa_whiteboard,
-                                  created_at=str(utc2local_parser(bug['creation_time']))[:-6],
-                                  status=bug['status'],
-                                  resolution=bug['resolution'])
 
 # =================================
 # auto_load_commits_of_members()
