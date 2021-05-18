@@ -454,7 +454,7 @@ var reopData = new Vue({
             // console.log(self.repoTmp[0].repo);
             // console.log(self.teamTmp);
             self.type = 2;
-            if (self.productType == 1)
+            if (self.productType != 0)
             {
                 $('#productTeamModal').modal('show')
             }
@@ -472,7 +472,7 @@ var reopData = new Vue({
             // console.log(self.repoTmp[0].repo);
             // console.log(self.memberTmp[0].name);
             self.type = 1;
-            if (self.productType == 1)
+            if (self.productType != 0)
             {
                 $('#productMemberModal').modal('show')
             }

@@ -713,6 +713,7 @@ def bug_status_team(request):
             start_date = serializer.validated_data['start_date']
             end_date = serializer.validated_data['end_date']
             team_code = serializer.validated_data.get('team_code', '')
+            excl_accept = False
             product_type = serializer.validated_data.get('product_type', '')
             if product_type == 2:
                 for arch in MULTI_ARCH_TYPE[1:]:
@@ -720,8 +721,14 @@ def bug_status_team(request):
                     kerbroes_id_list = [member.kerbroes_id for member in members]
                     d = _bug_status(start_date, end_date, kerbroes_id_list,
                                     arch=arch[1])
-                    d.update({'team': arch[1]})
+                    d.update({'team': arch[1].upper()})
                     details.append(d)
+                    if len(kerbroes_id_list) > 1:
+                        for kerbroes_id in kerbroes_id_list:
+                            d = _bug_status(start_date, end_date,
+                                            [kerbroes_id], arch=arch[1])
+                            d.update({'team': kerbroes_id})
+                            details.append(d)
             else:
                 kerbroes_id_list = _stats_type_sortor(
                     serializer.validated_data['stats_type'],
@@ -735,11 +742,16 @@ def bug_status_team(request):
                     excl_accept = False
                 det = _bug_status(start_date, end_date, kerbroes_id_list, excl_accept)
                 if len(kerbroes_id_list) > 1:
-                    name = team_code
+                    name = 'ALL'
                 else:
                     name = kerbroes_id_list[0]
                 det.update({'team': name})
                 details.append(det)
+                if len(kerbroes_id_list) > 1:
+                    for kerbroes_id in kerbroes_id_list:
+                        d = _bug_status(start_date, end_date, [kerbroes_id], excl_accept)
+                        d.update({'team': kerbroes_id})
+                        details.append(d)
             global PRODUCT_BUG_DATA
             PRODUCT_BUG_DATA = details
             response = _paginate_response(details, request)
@@ -815,46 +827,5 @@ def export_excel(request):
             'ProductStatisticReport.xlsx')
         output.close()
         return response
-        # raise APIError(APIError.INVALID_REQUEST_DATA, detail=serializer.errors)
     raise APIError(APIError.INVALID_REQUEST_METHOD,
                    detail='Does Not Support Post Method')
-
-
-# from django.shortcuts import render
-# from chartit import DataPool, Chart
-
-# def weather_chart_view(request):
-#     #Step 1: Create a DataPool with the data we want to retrieve.
-#     weatherdata = \
-#         DataPool(
-#            series=
-#             [{'options': {
-#                'source': Pull.objects.all()},
-#               'terms': [
-#                 'author',
-#                 'additions',
-#                 'deletions']}
-#              ])
-
-#     #Step 2: Create the Chart object
-#     cht = Chart(
-#             datasource = weatherdata,
-#             series_options =
-#               [{'options':{
-#                   'type': 'column',
-#                   'stacking': False},
-#                 'terms':{
-#                   'author': [
-#                     'additions',
-#                     'deletions']
-#                   }}],
-#             chart_options =
-#               {'title': {
-#                    'text': 'Weather Data of Boston and Houston'},
-#                'xAxis': {'title': {'text': 'author'}},
-#                'chart': { 'zoomType': 'xy'}
-#                        })
-
-
-#     #Step 3: Send the chart object to the template.
-#     return render(request, 'test.html',{'weatherchart': cht})
