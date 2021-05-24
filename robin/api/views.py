@@ -76,19 +76,23 @@ def _get_merged_by_kerbroes_id(github_account):
 
 
 def _get_bz_url(start_date, end_date, kerbroes_id_list,
-                extra_field=None, exclude_acceptance=False):
+                extra_field=None, exclude_acceptance=False, desired_qa_whiteboard=''):
 
     valid_bz_url = ('&classification=Red%%20Hat&list_id=%s&query_format=advanced'
                     '&f1=keywords&f2=%s&f3=cf_zstream_target_release' %
                     (robin_list_id, robin_role))
     if exclude_acceptance:
         valid_bz_url += '&f4=cf_qa_whiteboard'
+    if desired_qa_whiteboard:
+        valid_bz_url += '&f5=cf_qa_whiteboard'
     valid_bz_url += high_above_f
     valid_bz_url += '&o1=nowordssubstr&o2=anywordssubstr&o3=isempty'
 
     valid_bz_url += high_above_o
     if exclude_acceptance:
         valid_bz_url += '&o4=notsubstring'
+    if desired_qa_whiteboard:
+        valid_bz_url += '&o5=anywordssubstr'
     valid_bz_url += ('&chfield=%%5BBug%%20creation%%5D&chfieldfrom=%s&chfieldto=%s'
                      % (str(start_date)[:10], str(end_date)[:10]))
 
@@ -107,6 +111,8 @@ def _get_bz_url(start_date, end_date, kerbroes_id_list,
                'v2': kerbroes_id_list}
     if exclude_acceptance:
         filters.update({'v4': ['acceptance']})
+    if desired_qa_whiteboard:
+        filters.update({'v5': desired_qa_whiteboard.split(',')})
 
     for key, value in fields.items():
         for op in value:
@@ -141,18 +147,27 @@ def _bug_status(start_date, end_date, kerbroes_id_list,
     product_names = product.keys()
     product_names.append('all')
 
+    desired_qa_whiteboard = ''
     if not arch:
         platform_field = {
             'rep_platform': ["Unspecified", "All", "x86_64", "ppc64", "ppc64le"]}
         bug_model = ProductBug
     else:
+        desired_feature = {
+            's390 s390x': 'cpu,memory,virtual-block,storage-vm-migration',
+            'aarch64': 'virtual network,general operation,sve,cpu,'
+                       'memory,virtual-block,migration'}
+        if arch in desired_feature.keys():
+            desired_qa_whiteboard = desired_feature[arch]
         platform_field = {'rep_platform': arch.split()}
         bug_model = MultiArchProductBug
+
     with open('/tmp/robin.log', 'a') as f:
         f.write(str(bug_model))
     bz_url_all = _get_bz_url(start_date, end_date, kerbroes_id_list,
                              extra_field=platform_field,
-                             exclude_acceptance=exclude_acceptance)
+                             exclude_acceptance=exclude_acceptance,
+                             desired_qa_whiteboard=desired_qa_whiteboard)
 
     def get_num_valid(list_id, bz_filter='reporter', high=False):
         fields = {
@@ -162,7 +177,8 @@ def _bug_status(start_date, end_date, kerbroes_id_list,
         fields.update(platform_field)
         bz_url = _get_bz_url(start_date, end_date, kerbroes_id_list,
                              extra_field=fields,
-                             exclude_acceptance=exclude_acceptance)
+                             exclude_acceptance=exclude_acceptance,
+                             desired_qa_whiteboard=desired_qa_whiteboard)
         extra_filter = {'resolution': 'VALID'}
         return get_num_and_link(list_id, bz_filter,
                                 bz_url, high, extra_filter=extra_filter)
@@ -174,7 +190,8 @@ def _bug_status(start_date, end_date, kerbroes_id_list,
         fields.update(platform_field)
         bz_url = _get_bz_url(start_date, end_date, kerbroes_id_list,
                              extra_field=fields,
-                             exclude_acceptance=exclude_acceptance)
+                             exclude_acceptance=exclude_acceptance,
+                             desired_qa_whiteboard=desired_qa_whiteboard)
         extra_filter = {'status': 'FIXED'}
         return get_num_and_link(list_id, bz_filter,
                                 bz_url, high, extra_filter=extra_filter)
@@ -187,7 +204,8 @@ def _bug_status(start_date, end_date, kerbroes_id_list,
         fields.update(platform_field)
         bz_url = _get_bz_url(start_date, end_date, kerbroes_id_list,
                              extra_field=fields,
-                             exclude_acceptance=exclude_acceptance)
+                             exclude_acceptance=exclude_acceptance,
+                             desired_qa_whiteboard=desired_qa_whiteboard)
         extra_filter = {'resolution': 'INVALID'}
         return get_num_and_link(list_id, bz_filter,
                                 bz_url, high, extra_filter=extra_filter)
@@ -211,7 +229,7 @@ def _bug_status(start_date, end_date, kerbroes_id_list,
                 if p_name == 'Red Hat Enterprise Linux Advanced Virtualization':
                     continue
                 filter_dict = {'bug_product': p_name}
-                if arch:
+                if arch and arch in [i[1] for i in MULTI_ARCH_TYPE[1:]]:
                     filter_dict.update({'hardware': arch})
                 if extra_filter:
                     filter_dict.update(extra_filter)
@@ -223,14 +241,14 @@ def _bug_status(start_date, end_date, kerbroes_id_list,
                         f.write('filter: %s' % str(filter_dict))
                     bugs = bug_model.objects.filter(**filter_dict).filter(
                         created_at__range=(start_date, end_date))
-                    if exclude_acceptance:
-                        bugs = bugs.exclude(qa_whiteboard__contains='acceptance')
+                    if exclude_acceptance or desired_qa_whiteboard:
+                        bugs = bugs.exclude(qa_whiteboard__contains='not_desired')
                     if high:
                         filter_dict.update({'priority': 'urgent'})
                         u_bugs = bug_model.objects.filter(**filter_dict).filter(
                             created_at__range=(start_date, end_date))
-                        if exclude_acceptance:
-                            u_bugs = u_bugs.exclude(qa_whiteboard__contains='acceptance')
+                        if exclude_acceptance or desired_qa_whiteboard:
+                            u_bugs = u_bugs.exclude(qa_whiteboard__contains='not_desired')
                         bugs = bugs | u_bugs
                     if bz_filter == 'reporter':
                         new_count = 0
@@ -356,16 +374,22 @@ class BugListView(APIView):
         """
         Generate bug data for multi arch group
         """
+        all_members = []
         for arch in MULTI_ARCH_TYPE[1:]:
             with open('/tmp/robin.log', 'a') as f:
                 f.write('arch: %s' % str(arch))
             members = Member.objects.filter(multi_arch_type=arch[0])
             kerbroes_id_list = [member.kerbroes_id for member in members]
+            all_members.extend(kerbroes_id_list)
             with open('/tmp/robin.log', 'a') as f:
                 f.write('kerbroes_id_list: %s' % str(kerbroes_id_list))
             d = _bug_status(start_date, end_date, kerbroes_id_list, arch=arch[1])
             d.update({'team': arch[1].replace(' ', '/')})
             self.details.append(d)
+        all_archs = ' '.join([i[1] for i in MULTI_ARCH_TYPE[1:]])
+        d = _bug_status(start_date, end_date, all_members, arch=all_archs)
+        d.update({'team': 'ALL'})
+        self.details.append(d)
 
     def get(self, request, format=None):
         logger.info('[bug_status] Received data is valid.')
@@ -713,12 +737,13 @@ def bug_status_team(request):
             start_date = serializer.validated_data['start_date']
             end_date = serializer.validated_data['end_date']
             team_code = serializer.validated_data.get('team_code', '')
-            excl_accept = False
             product_type = serializer.validated_data.get('product_type', '')
             if product_type == 2:
+                all_members = []
                 for arch in MULTI_ARCH_TYPE[1:]:
                     members = Member.objects.filter(multi_arch_type=arch[0])
                     kerbroes_id_list = [member.kerbroes_id for member in members]
+                    all_members.extend(kerbroes_id_list)
                     d = _bug_status(start_date, end_date, kerbroes_id_list,
                                     arch=arch[1])
                     d.update({'team': arch[1].upper()})
@@ -729,6 +754,11 @@ def bug_status_team(request):
                                             [kerbroes_id], arch=arch[1])
                             d.update({'team': kerbroes_id})
                             details.append(d)
+                all_archs = ' '.join([i[1] for i in MULTI_ARCH_TYPE[1:]])
+                d = _bug_status(start_date, end_date, all_members,
+                                arch=all_archs)
+                d.update({'team': 'ALL'})
+                details.append(d)
             else:
                 kerbroes_id_list = _stats_type_sortor(
                     serializer.validated_data['stats_type'],

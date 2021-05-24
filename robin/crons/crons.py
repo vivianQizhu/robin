@@ -346,7 +346,20 @@ def auto_update_product_bug():
         for bug in bug_list:
             qa_contact = bug['qa_contact'].split('@')[0]
             qa_whiteboard = bug['cf_qa_whiteboard']
-            qa_whiteboard = 'acceptance' if 'acceptance' in qa_whiteboard else ''
+            if not multi_arch:
+                qa_whiteboard = 'not_desired' if 'acceptance' in qa_whiteboard else ''
+            else:
+                s390_features = 'cpu,memory,virtual-block,storage-vm-migration'
+                desired_feature = {'s390': s390_features, 's390x': s390_features,
+                                   'aarch64': 'virtual network,general operation,'
+                                              'sve,cpu,memory,virtual-block,migration'}
+                for feature in desired_feature[bug['platform']].split(','):
+                    if feature in qa_whiteboard:
+                        qa_whiteboard = 'desired_feature'
+                        break
+                else:
+                    qa_whiteboard = 'not_desired'
+
             high_keywords = ['high', 'urgent']
             if bug[
                 'product'] == 'Red Hat Enterprise Linux Advanced Virtualization':
