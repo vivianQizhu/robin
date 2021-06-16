@@ -301,7 +301,7 @@ def auto_update_product_bug():
             'component': ['qemu-kvm', 'kernel', 'virtio-win', 'seabios', 'edk2',
                           'slof', 'qemu-guest-agent', 'dtc', 'kernel-rt', 'ovmf',
                           'libtpms', 'virglrenderer', 'qemu-kvm-rhev', 'kernel-rt',
-                          'qemu-guest-agent', 'qemu-kvm-ma','kernel-alt']}
+                          'qemu-kvm-ma','kernel-alt', 'mdevctl']}
         if multi_arch:
             fields.update({'rep_platform': ['aarch64', 's390', 's390x']})
         else:

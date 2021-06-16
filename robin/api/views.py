@@ -100,7 +100,7 @@ def _get_bz_url(start_date, end_date, kerbroes_id_list,
         'component': ['qemu-kvm', 'kernel', 'virtio-win', 'seabios', 'edk2',
                       'slof', 'qemu-guest-agent', 'dtc', 'kernel-rt', 'ovmf',
                       'libtpms', 'virglrenderer', 'qemu-kvm-rhev', 'kernel-rt',
-                      'qemu-guest-agent', 'qemu-kvm-ma', 'kernel-alt']}
+                      'qemu-kvm-ma', 'kernel-alt', 'mdevctl']}
     if extra_field:
         fields.update(extra_field)
 
